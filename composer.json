@@ -27,7 +27,7 @@
     },
     "require": {
         "php": "^8.2",
-        "indexnowkit/core": "^0.8",
+        "indexnowkit/core": "^0.9",
         "symfony/console": "^6.4 || ^7.0 || ^8.0"
     },
     "require-dev": {
@@ -62,7 +62,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "0.2.x-dev"
+            "dev-main": "0.3.x-dev"
         }
     }
 }
