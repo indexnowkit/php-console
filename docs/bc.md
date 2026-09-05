@@ -18,5 +18,5 @@ written for humans and get improved); exit codes are.
 
 Not covered: log and exception message texts, anything under `tests/`.
 
-The package pins `indexnowkit/core ^0.7`: the runners take the core's `Config`, `Checker`, `Adapter\SubmitterFactoryInterface`
+The package pins `indexnowkit/core ^0.8`: the runners take the core's `Config`, `Checker`, `Adapter\SubmitterFactoryInterface`
 and `Submission\ResultSummary`, so a core minor that changes them ships with a `console` minor.
