@@ -5,7 +5,7 @@
 
 | Tier | Members |
 |---|---|
-| **Call** — signatures only grow by appended, defaulted parameters; pass anything past the first argument by name | `CheckRunner`, `SubmitRunner`, `SubmitSubjectsRunner`, `ExplainRunner`, `KeyGenerateRunner` (constructors and `run()`), `ResultRenderer`, `Vocabulary` (constructor: named arguments), `ClassNameResolver`, `Definitions::*` |
+| **Call** — signatures only grow by appended, defaulted parameters; pass anything past the first argument by name | `CheckRunner`, `ConfigRunner`, `SubmitRunner`, `SubmitSubjectsRunner`, `ExplainRunner`, `KeyGenerateRunner` (constructors and `run()`), `ResultRenderer`, `Vocabulary` (constructor: named arguments), `ClassNameResolver`, `Definitions::*` |
 | **Implement** — methods are not added without a major version | `SubjectLoaderInterface`, `ResultFormatterInterface` |
 | **Value objects** — `final readonly`, properties only appended with defaults | `CommandDefinition`, `ArgumentDefinition`, `OptionDefinition`, `SubmitSubjectsOptions` |
 | **Constants** — referenced, not hard-coded | `ExitCode::SUCCESS`, `FAILURE`, `INVALID`, `OptionDefinition::FLAG`, `VALUE`, `OPTIONAL_VALUE`, `LIST`, `CheckRunner::CONFIG_INVALID` |

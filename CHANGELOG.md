@@ -26,6 +26,10 @@ contain breaking changes, listed under "Changed". What the compatibility promise
   conditions print their class. `explain --json` gives the same walk as one document (`class`, `id`, `event`,
   `config`, `rules[]` with `when[]`, `delivery[]`, `submits`); `ExplainRunner::run()` takes `bool $json = false`
   (appended), `Definitions::explain()` declares the flag.
+- **`indexnow:config`** (spec 17 §5.7): `ConfigRunner` prints the effective configuration (defaults and environment
+  applied, `key`, `previous_key` and the `hosts` keys masked) as a table, and with `--json` as
+  `{"config", "adapter" (the adapter-only keys of the raw configuration, as given), "endpoints", "core"}` — the
+  artifact for a bug report. `Definitions::config()` declares it; an invalid configuration is exit 1 with the error.
 
 ## [0.1.0] — 2026-09-06
 

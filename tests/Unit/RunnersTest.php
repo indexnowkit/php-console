@@ -12,6 +12,7 @@ use IndexNowKit\Check\CheckInterface;
 use IndexNowKit\Check\CheckReport;
 use IndexNowKit\Config;
 use IndexNowKit\Console\CheckRunner;
+use IndexNowKit\Console\ConfigRunner;
 use IndexNowKit\Console\ExitCode;
 use IndexNowKit\Console\ExplainRunner;
 use IndexNowKit\Console\KeyGenerateRunner;
@@ -541,6 +542,46 @@ final class RunnersTest extends TestCase
         $invalid = json_decode(json_encode($report, JSON_THROW_ON_ERROR));
         $validator->validate($invalid, $schema);
         self::assertTrue($validator->isValid());
+    }
+
+    #[TestDox('config: the effective configuration with masked keys and the adapter-only keys, as a table or as JSON; an invalid configuration is a FAILURE')]
+    public function testConfig(): void
+    {
+        $raw = ['key' => Factory::KEY, 'hosts' => ['b.example.com' => Factory::KEY, 'c.example.com' => ['key' => Factory::KEY, 'previous_key' => 'oldkey1234567890']], 'base_url' => 'https://www.example.com', 'debounce' => ['per_url' => 30], 'queue' => ['connection' => 'redis'], 'eloquent' => ['enabled' => false], 'messenger' => ['transport' => 'async']];
+        $runner = new ConfigRunner(new Vocabulary(configLocation: 'config/indexnow.php'));
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $raw, true));
+        $raw_output = $this->output->fetch();
+        $decoded = json_decode($raw_output, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertStringNotContainsString(Factory::KEY, $raw_output, 'keys are masked everywhere');
+        self::assertStringNotContainsString('oldkey1234567890', $raw_output);
+        self::assertSame(KeyValidator::mask(Factory::KEY), $decoded['config']['key']);
+        self::assertSame(KeyValidator::mask(Factory::KEY), $decoded['config']['hosts']['b.example.com']);
+        self::assertSame(KeyValidator::mask('oldkey1234567890'), $decoded['config']['hosts']['c.example.com']['previous_key']);
+        self::assertSame(30, $decoded['config']['debounce']['per_url']);
+        self::assertSame(600, Config::DEFAULT_DEBOUNCE_PER_URL, 'sanity');
+        self::assertSame(10000, $decoded['config']['batch']['max_urls'], 'defaults are filled in');
+        self::assertTrue($decoded['config']['normalizer']['strip_tracking_params']);
+        self::assertSame(['queue' => ['connection' => 'redis'], 'eloquent' => ['enabled' => false], 'messenger' => ['transport' => 'async']], $decoded['adapter'], 'the keys the core does not know, as given');
+        self::assertSame(['https://api.indexnow.org/indexnow'], $decoded['endpoints']);
+        self::assertIsString($decoded['core']);
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $raw));
+        $display = $this->output->fetch();
+        self::assertStringContainsString('IndexNow configuration', $display);
+        self::assertStringContainsString('config/indexnow.php', $display);
+        self::assertStringContainsString('debounce.per_url', $display);
+        self::assertStringContainsString('queue.connection', $display);
+        self::assertStringNotContainsString(Factory::KEY, $display);
+
+        self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), static function (): never {
+            throw new ConfigurationException('key "shor*" is invalid');
+        }, $raw, true));
+        $decoded = json_decode($this->output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('key "shor*" is invalid', $decoded['error']);
+        self::assertSame(['queue' => ['connection' => 'redis'], 'eloquent' => ['enabled' => false], 'messenger' => ['transport' => 'async']], $decoded['adapter'], 'the adapter keys still help the bug report');
     }
 
     #[TestDox('ResultRenderer: an empty summary is a warning, an all-skipped summary carries the reason note')]

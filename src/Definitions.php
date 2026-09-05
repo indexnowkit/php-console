@@ -33,6 +33,16 @@ final class Definitions
         );
     }
 
+    /** `config`: {@see ConfigRunner::run()}. */
+    public static function config(): CommandDefinition
+    {
+        return new CommandDefinition(
+            'Print the effective IndexNow configuration: defaults and environment applied, keys masked (paste it into a bug report)',
+            [],
+            [OptionDefinition::flag('json', 'Machine-readable output: config (effective, keys masked), adapter (the adapter-only keys), endpoints, core version')],
+        );
+    }
+
     /** `submit <urls...>`: {@see SubmitRunner::run()}. */
     public static function submit(): CommandDefinition
     {

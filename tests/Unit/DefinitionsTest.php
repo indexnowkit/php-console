@@ -42,6 +42,7 @@ final class DefinitionsTest extends TestCase
         self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], self::inputs(Definitions::check()));
         self::assertSame(OptionDefinition::LIST, Definitions::check()->option('host')->mode);
         self::assertSame(['urls', 'force', 'dryRun', 'json'], self::inputs(Definitions::submit()));
+        self::assertSame(['json'], self::inputs(Definitions::config()));
         self::assertSame(['length', 'alphanumeric', 'writeEnv', 'force', 'noPrevious', 'yes'], self::inputs(Definitions::keyGenerate()));
         self::assertStringContainsString('(default .env.local)', Definitions::keyGenerate('.env.local')->option('write-env')->description);
         self::assertSame('l', Definitions::keyGenerate()->option('length')->shortcut);
