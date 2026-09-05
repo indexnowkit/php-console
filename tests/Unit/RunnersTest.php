@@ -445,7 +445,7 @@ final class RunnersTest extends TestCase
         self::assertSame(['www.example.com', 'b.example.com'], array_column(array_filter($items, static fn(array $i): bool => $i['code'] === 'key_file.status'), 'host'), 'one key file line per requested host, in the requested order, de-duplicated');
         self::assertCount(1, array_filter($items, static fn(array $i): bool => $i['code'] === 'cdn.purged'), 'the global lines are kept once');
         self::assertCount(1, array_filter($items, static fn(array $i): bool => $i['code'] === 'environment.name'));
-        self::assertCount(8, $this->transport->gets, 'two runs (one per host) fetch one key file each, after the three full runs above');
+        self::assertCount(16, $this->transport->gets, 'two runs (one per host) fetch one key file and one robots.txt each, after the three full runs above');
 
         self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), static function (): never {
             throw new ConfigurationException('key "shor*" is invalid');
