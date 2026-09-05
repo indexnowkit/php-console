@@ -8,7 +8,8 @@
 | **Call** — signatures only grow by appended, defaulted parameters; pass anything past the first argument by name | `CheckRunner`, `SubmitRunner`, `SubmitSubjectsRunner`, `ExplainRunner`, `KeyGenerateRunner` (constructors and `run()`), `ResultRenderer`, `Vocabulary` (constructor: named arguments), `ClassNameResolver`, `Definitions::*` |
 | **Implement** — methods are not added without a major version | `SubjectLoaderInterface`, `ResultFormatterInterface` |
 | **Value objects** — `final readonly`, properties only appended with defaults | `CommandDefinition`, `ArgumentDefinition`, `OptionDefinition`, `SubmitSubjectsOptions` |
-| **Constants** — referenced, not hard-coded | `ExitCode::SUCCESS`, `FAILURE`, `INVALID` |
+| **Constants** — referenced, not hard-coded | `ExitCode::SUCCESS`, `FAILURE`, `INVALID`, `OptionDefinition::FLAG`, `VALUE`, `OPTIONAL_VALUE`, `LIST`, `CheckRunner::CONFIG_INVALID` |
+| **Documents** — the shape only grows by optional members | `docs/check.schema.json`, the JSON of `check --json` (`status`, `environment`, `items[].{level, code, message, host}`); the codes are the core's `docs/check-codes.md` |
 
 **Command surface.** The argument and option names, defaults and descriptions in `Definitions` are what the adapters
 render into their commands, so they are the public API of every adapter's CLI: an option is renamed only with a

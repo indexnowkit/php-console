@@ -398,6 +398,69 @@ final class RunnersTest extends TestCase
         self::assertStringContainsString('config/indexnow.php', $display);
     }
 
+    #[TestDox('check --json: the report of docs/check.schema.json with status, environment and coded items; --strict fails on warnings without changing the status; --host repeated merges the host lines')]
+    public function testCheckJsonStrictAndHosts(): void
+    {
+        $config = Factory::config(['environment' => 'prod', 'hosts' => ['b.example.com' => Factory::KEY]]);
+        $checker = new Checker($config, \IndexNowKit\Key\StaticKeyProvider::fromConfig($config), $this->transport, [new \IndexNowKit\Check\StaticCheck(\IndexNowKit\Check\CheckLevel::Ok, 'cdn: purged', 'cdn.purged')]);
+        $runner = new CheckRunner($checker);
+        $valid = static fn(): Config => $config;
+        $this->transport->onGet('https://www.example.com/' . Factory::KEY . '.txt', new Response(200, Factory::KEY));
+        $this->transport->onGet('https://b.example.com/' . Factory::KEY . '.txt', new Response(200, Factory::KEY));
+        $schema = json_decode((string) file_get_contents(__DIR__ . '/../../docs/check.schema.json'));
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), $valid, json: true), 'the hosts map without strict_hosts is a warning, not an error');
+        $raw = $this->output->fetch();
+        self::assertStringNotContainsString('IndexNow check', $raw, 'no title, no closing line: stdout is the JSON document');
+        $decoded = json_decode($raw);
+        $validator = new \JsonSchema\Validator();
+        $validator->validate($decoded, $schema);
+        self::assertTrue($validator->isValid(), json_encode($validator->getErrors(), JSON_PRETTY_PRINT) . "\n" . $raw);
+        $report = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($report);
+        self::assertSame('warning', $report['status']);
+        self::assertSame('prod', $report['environment']);
+        $items = $report['items'];
+        self::assertIsArray($items);
+        $codes = array_column($items, 'code');
+        self::assertContains('config.strict_hosts', $codes);
+        self::assertContains('cdn.purged', $codes);
+        self::assertSame(['b.example.com', 'www.example.com'], array_column(array_filter($items, static fn(array $i): bool => $i['code'] === 'key_file.status'), 'host'));
+        self::assertNull($items[0]['host']);
+        self::assertSame([], array_filter($items, static fn(array $i): bool => $i['code'] === null), 'every line has a code');
+
+        self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), $valid, json: true, strict: true), '--strict: warnings fail');
+        $report = json_decode($this->output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($report);
+        self::assertSame('warning', $report['status'], '--strict changes the exit code, not the status');
+
+        self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), $valid, strict: true));
+        self::assertStringContainsString('--strict treats the warnings above', $this->output->fetch());
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), $valid, host: ['www.example.com', 'B.example.com', 'www.example.com'], json: true));
+        $report = json_decode($this->output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($report);
+        $items = $report['items'];
+        self::assertIsArray($items);
+        self::assertSame(['www.example.com', 'b.example.com'], array_column(array_filter($items, static fn(array $i): bool => $i['code'] === 'key_file.status'), 'host'), 'one key file line per requested host, in the requested order, de-duplicated');
+        self::assertCount(1, array_filter($items, static fn(array $i): bool => $i['code'] === 'cdn.purged'), 'the global lines are kept once');
+        self::assertCount(1, array_filter($items, static fn(array $i): bool => $i['code'] === 'environment.name'));
+        self::assertCount(8, $this->transport->gets, 'two runs (one per host) fetch one key file each, after the three full runs above');
+
+        self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), static function (): never {
+            throw new ConfigurationException('key "shor*" is invalid');
+        }, json: true));
+        $report = json_decode($this->output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($report);
+        self::assertSame('error', $report['status']);
+        self::assertNull($report['environment']);
+        self::assertSame([['level' => 'error', 'code' => CheckRunner::CONFIG_INVALID, 'message' => 'configuration: key "shor*" is invalid', 'host' => null]], $report['items']);
+        $validator->reset();
+        $invalid = json_decode(json_encode($report, JSON_THROW_ON_ERROR));
+        $validator->validate($invalid, $schema);
+        self::assertTrue($validator->isValid());
+    }
+
     #[TestDox('ResultRenderer: an empty summary is a warning, an all-skipped summary carries the reason note')]
     public function testRendererSummary(): void
     {

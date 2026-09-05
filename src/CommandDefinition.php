@@ -67,6 +67,7 @@ final readonly class CommandDefinition
             [$mode, $default] = match ($option->mode) {
                 OptionDefinition::FLAG => [InputOption::VALUE_NONE, null],
                 OptionDefinition::VALUE => [InputOption::VALUE_REQUIRED, $option->default],
+                OptionDefinition::LIST => [InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, []],
                 default => [InputOption::VALUE_OPTIONAL, false],
             };
             $command->addOption($option->name, $option->shortcut, $mode, $option->description, $default);
@@ -76,7 +77,7 @@ final readonly class CommandDefinition
     /**
      * Laravel: the `$signature` of an artisan command (`indexnow:check {--live : ...}`), one line per input.
      * An OPTIONAL_VALUE option renders as `{--name= : ...}`; `Input::hasParameterOption('--name')` tells "given
-     * without a value" from "not given".
+     * without a value" from "not given". A LIST option renders as `{--name=* : ...}` and `option('name')` is an array.
      */
     public function laravelSignature(string $command): string
     {
@@ -89,6 +90,7 @@ final readonly class CommandDefinition
             $lines[] = match ($option->mode) {
                 OptionDefinition::FLAG => \sprintf('{--%s : %s}', $name, $option->description),
                 OptionDefinition::VALUE => \sprintf('{--%s=%s : %s}', $name, $option->default ?? '', $option->description),
+                OptionDefinition::LIST => \sprintf('{--%s=* : %s}', $name, $option->description),
                 default => \sprintf('{--%s= : %s}', $name, $option->description),
             };
         }
@@ -97,7 +99,8 @@ final readonly class CommandDefinition
     }
 
     /**
-     * Yii: the option names of `Controller::options()`, as the camelCase public properties of the controller.
+     * Yii: the option names of `Controller::options()`, as the camelCase public properties of the controller. A LIST
+     * option is an `array` property: Yii splits `--host=a,b` on the comma into it.
      *
      * @return list<string>
      */

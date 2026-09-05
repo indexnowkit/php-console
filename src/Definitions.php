@@ -25,8 +25,10 @@ final class Definitions
             [],
             [
                 OptionDefinition::flag('live', 'Send a real probe request (site root URL) to every configured engine'),
-                OptionDefinition::value('host', 'Check only this host (multi-domain setups)'),
+                OptionDefinition::list('host', 'Check only this host (repeatable; multi-domain setups)'),
                 OptionDefinition::value('probe-url', 'Page to send with --live (default: https://<host>/; give a real page when the root redirects)'),
+                OptionDefinition::flag('json', 'Machine-readable report (schema: docs/check.schema.json of indexnowkit/console): status, environment, items with level, code, message, host'),
+                OptionDefinition::flag('strict', 'Exit 1 on warnings too, not only on errors (deploy pipelines)'),
             ],
         );
     }

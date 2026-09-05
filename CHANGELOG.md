@@ -3,6 +3,20 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: SemVer; until 1.0 minor versions may
 contain breaking changes, listed under "Changed". What the compatibility promise covers: [docs/bc.md](docs/bc.md).
 
+## [Unreleased]
+
+### Added
+
+- **`check --json`, `--strict`, repeatable `--host`** (spec 17 §5.1). `Definitions::check()` declares the three;
+  `CheckRunner::run()` takes `string|list<string>|null $host` (widened) plus appended `bool $json = false, bool
+  $strict = false`. `--json` prints the report of [docs/check.schema.json](docs/check.schema.json) (`status`,
+  `environment`, `items[].{level, code, message, host}`; an invalid configuration is one `config.invalid` error item);
+  `--strict` exits 1 on warnings without changing `status`; several `--host` run the checker once per host and merge
+  the reports (global lines once, host lines per host). `CheckRunner::toJson()` is public for adapters that print
+  the report elsewhere.
+- `OptionDefinition::LIST` / `OptionDefinition::list()`: a repeatable value option — `--name=a --name=b` in
+  symfony/console, `{--name=* : …}` in an artisan signature, an `array` property (`--name=a,b`) in a Yii controller.
+
 ## [0.1.0] — 2026-09-06
 
 First release: the console layer of the family, split out of `indexnowkit/core` 0.6 (spec 17 §4.2) so the core no

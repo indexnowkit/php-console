@@ -39,7 +39,8 @@ final class DefinitionsTest extends TestCase
         $words = new Vocabulary(subject: 'model', subjects: 'models');
         self::assertSame(['class', 'id', 'event'], self::inputs(Definitions::explain($words)));
         self::assertSame(['model', 'id', 'event'], self::inputs(Definitions::explain($words, 'model')));
-        self::assertSame(['live', 'host', 'probeUrl'], self::inputs(Definitions::check()));
+        self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], self::inputs(Definitions::check()));
+        self::assertSame(OptionDefinition::LIST, Definitions::check()->option('host')->mode);
         self::assertSame(['urls', 'force', 'dryRun', 'json'], self::inputs(Definitions::submit()));
         self::assertSame(['length', 'alphanumeric', 'writeEnv', 'force'], self::inputs(Definitions::keyGenerate()));
         self::assertStringContainsString('(default .env.local)', Definitions::keyGenerate('.env.local')->option('write-env')->description);
@@ -55,7 +56,7 @@ final class DefinitionsTest extends TestCase
             Definitions::check()->option('nope');
             self::fail();
         } catch (InvalidArgumentException $e) {
-            self::assertSame('The command has no option "nope"; it has: live, host, probe-url.', $e->getMessage());
+            self::assertSame('The command has no option "nope"; it has: live, host, probe-url, json, strict.', $e->getMessage());
         }
         try {
             Definitions::check()->argument('nope');
@@ -83,7 +84,7 @@ final class DefinitionsTest extends TestCase
         self::assertSame($expected, Definitions::submitSubjects($words, 'model')->laravelSignature('indexnow:submit-model'));
         self::assertStringContainsString("{--write-env= : Write INDEXNOW_KEY=<key> to this env file (default .env); idempotent}", Definitions::keyGenerate()->laravelSignature('indexnow:key:generate'));
         self::assertStringContainsString('{urls* : Absolute URLs or paths relative to base_url}', Definitions::submit()->laravelSignature('indexnow:submit'));
-        self::assertStringContainsString('{--host= : Check only this host (multi-domain setups)}', Definitions::check()->laravelSignature('indexnow:check'));
+        self::assertStringContainsString('{--host=* : Check only this host (repeatable; multi-domain setups)}', Definitions::check()->laravelSignature('indexnow:check'), 'a LIST option is --name=*');
     }
 
     #[TestDox('applyTo() configures a symfony/console command with the same inputs')]
@@ -111,6 +112,14 @@ final class DefinitionsTest extends TestCase
         self::assertSame('updated', $definition->getOption('event')->getDefault());
         self::assertSame(InputArgument::REQUIRED | InputArgument::IS_ARRAY, InputArgument::REQUIRED | InputArgument::IS_ARRAY);
         self::assertSame(InputOption::VALUE_NONE, InputOption::VALUE_NONE);
+
+        $command = new Command('indexnow:check');
+        Definitions::check()->applyTo($command);
+        $host = $command->getDefinition()->getOption('host');
+        self::assertTrue($host->isArray(), 'a LIST option is repeatable');
+        self::assertTrue($host->isValueRequired());
+        self::assertSame([], $host->getDefault());
+        self::assertFalse($command->getDefinition()->getOption('strict')->acceptValue());
     }
 
     #[TestDox('yiiOptions() and yiiAliases() are the camelCase properties and the shortcuts of a Yii controller')]
@@ -119,7 +128,7 @@ final class DefinitionsTest extends TestCase
         $definition = Definitions::submitSubjects(new Vocabulary(subject: 'record', subjects: 'records'));
         self::assertSame(['event', 'limit', 'explain', 'force', 'dryRun', 'json'], $definition->yiiOptions());
         self::assertSame(['f' => 'force'], $definition->yiiAliases());
-        self::assertSame(['live', 'host', 'probeUrl'], Definitions::check()->yiiOptions());
+        self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], Definitions::check()->yiiOptions());
         self::assertSame(['l' => 'length'], Definitions::keyGenerate()->yiiAliases());
         self::assertSame('allowForeignHosts', (new OptionDefinition('allow-foreign-hosts', ''))->property());
         self::assertSame([], (new CommandDefinition('x', [ArgumentDefinition::optional('a', 'b')]))->yiiOptions());
