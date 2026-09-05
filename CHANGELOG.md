@@ -21,6 +21,11 @@ contain breaking changes, listed under "Changed". What the compatibility promise
   that variable still holds the key of an earlier rotation (`KeyGenerateRunner::PREVIOUS_KEY_STILL_SET`, exit 1,
   nothing written). New flags `--no-previous` (rotate and drop the variable) and `--yes` (overwrite it);
   `KeyGenerateRunner::run()` takes them as appended `bool $noPrevious = false, bool $yes = false`.
+- `explain` prints every `when` condition with the value it read and, for a truthy status string, the fix
+  (`when: status ("draft") -> true — a non-empty string is truthy; use new Equals('status', "draft")`); custom
+  conditions print their class. `explain --json` gives the same walk as one document (`class`, `id`, `event`,
+  `config`, `rules[]` with `when[]`, `delivery[]`, `submits`); `ExplainRunner::run()` takes `bool $json = false`
+  (appended), `Definitions::explain()` declares the flag.
 
 ## [0.1.0] — 2026-09-06
 

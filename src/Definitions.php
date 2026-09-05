@@ -84,7 +84,10 @@ final class Definitions
                 self::classArgument($words, $classArgument),
                 ArgumentDefinition::required('id', 'Identifier'),
             ],
-            [OptionDefinition::value('event', 'created | updated | deleted', 'updated')],
+            [
+                OptionDefinition::value('event', 'created | updated | deleted', 'updated'),
+                OptionDefinition::flag('json', 'Machine-readable explanation: rules with their when values, delivery, what would be submitted'),
+            ],
         );
     }
 

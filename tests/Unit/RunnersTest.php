@@ -40,6 +40,18 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+#[IndexNow(url: 'url', when: 'status')]
+#[IndexNow(urls: ['/articles'], when: new \IndexNowKit\Attribute\Param\Equals('status', 'published'), name: 'index')]
+final class ConsoleArticle
+{
+    public function __construct(public int $id, public string $status = 'draft') {}
+
+    public function url(): string
+    {
+        return '/articles/' . $this->id;
+    }
+}
+
 #[IndexNow(url: 'url', when: 'published')]
 final class ConsolePost
 {
@@ -134,7 +146,7 @@ final class RunnersTest extends TestCase
 
     private function loader(): ArraySubjectLoader
     {
-        return new ArraySubjectLoader([ConsolePost::class => [new ConsolePost(1, 'one'), new ConsolePost(2, 'two'), new ConsolePost(3, 'draft', published: false)], ConsoleUntracked::class => [new ConsoleUntracked(7)]]);
+        return new ArraySubjectLoader([ConsolePost::class => [new ConsolePost(1, 'one'), new ConsolePost(2, 'two'), new ConsolePost(3, 'draft', published: false)], ConsoleUntracked::class => [new ConsoleUntracked(7)], ConsoleArticle::class => [new ConsoleArticle(1)]]);
     }
 
     /**
@@ -295,7 +307,7 @@ final class RunnersTest extends TestCase
         self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), ConsolePost::class, '1'));
         $display = $this->output->fetch();
         self::assertStringContainsString('IndexNow explain: ' . ConsolePost::class . ' #1 (updated)', $display);
-        self::assertStringContainsString('when: published -> true', $display);
+        self::assertStringContainsString('when: published (true) -> true', $display, 'the value the condition read is shown');
         self::assertStringContainsString('url: /posts/one', $display);
         self::assertStringContainsString('https://www.example.com/posts/one (normalized from /posts/one)', $display);
         self::assertStringContainsString('host www.example.com, key ' . KeyValidator::mask(Factory::KEY), $display);
@@ -306,8 +318,52 @@ final class RunnersTest extends TestCase
 
         self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), ConsolePost::class, '3'));
         $display = $this->output->fetch();
-        self::assertStringContainsString('when: published -> false', $display);
+        self::assertStringContainsString('when: published (false) -> false', $display);
         self::assertStringContainsString('No URL would be submitted', $display);
+    }
+
+    #[TestDox('explain: a truthy status string gets the Equals hint, an Equals condition shows the comparison and the value; --json is the same walk as one document')]
+    public function testExplainConditionValuesAndJson(): void
+    {
+        $kit = $this->kit();
+        $runner = new ExplainRunner($kit, $this->loader(), $kit->config, $kit->keys, new MemoryDebounceStore(), new UrlNormalizer($kit->config->baseUrl));
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), ConsoleArticle::class, '1'));
+        $display = $this->output->fetch();
+        self::assertStringContainsString('when: status ("draft") -> true — a non-empty string is truthy; use new Equals(\'status\', "draft")', $display);
+        self::assertStringContainsString('when: status == "published" ("draft") -> false (page not public, nothing submitted)', $display);
+        self::assertStringContainsString('url: /articles/1', $display, 'the truthy rule still resolves');
+        self::assertStringNotContainsString('url: /articles' . "\n", $display, 'the Equals rule yields nothing');
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), ConsoleArticle::class, '1', json: true));
+        $raw = $this->output->fetch();
+        $decoded = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame(ConsoleArticle::class, $decoded['class']);
+        self::assertSame('updated', $decoded['event']);
+        self::assertSame(['enabled' => true, 'dry_run' => false, 'dispatch' => 'sync', 'debounce' => 0], $decoded['config']);
+        $rules = $decoded['rules'];
+        self::assertIsArray($rules);
+        self::assertCount(2, $rules);
+        self::assertSame('url:url', $rules[0]['name']);
+        self::assertSame([['condition' => 'status', 'reads' => true, 'value' => 'draft', 'holds' => true, 'hint' => 'a non-empty string is truthy; use new Equals(\'status\', "draft")', 'error' => null]], $rules[0]['when']);
+        self::assertTrue($rules[0]['applies']);
+        self::assertSame([['url' => '/articles/1', 'locale' => null, 'rule' => 'url:url']], $rules[0]['resolved']);
+        self::assertSame('index', $rules[1]['name']);
+        self::assertSame('status == "published"', $rules[1]['when'][0]['condition']);
+        self::assertFalse($rules[1]['when'][0]['holds']);
+        self::assertFalse($rules[1]['applies']);
+        self::assertSame([], $rules[1]['resolved']);
+        self::assertSame(['https://www.example.com/articles/1'], $decoded['submits']);
+        self::assertSame('https://www.example.com/articles/1', $decoded['delivery'][0]['normalized']);
+        self::assertSame(KeyValidator::mask(Factory::KEY), $decoded['delivery'][0]['key']);
+        self::assertStringNotContainsString(Factory::KEY, $raw);
+        self::assertSame([], $this->transport->posts);
+
+        self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), ConsoleUntracked::class, '7', json: true));
+        $decoded = json_decode($this->output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame([], $decoded['rules'], 'no rules: an empty document and exit 1, like the text form');
     }
 
     #[TestDox('explain: an object without rules is a FAILURE; unknown class, unknown id and a bad event are INVALID')]

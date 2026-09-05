@@ -37,8 +37,8 @@ final class DefinitionsTest extends TestCase
     public function testOtherDefinitions(): void
     {
         $words = new Vocabulary(subject: 'model', subjects: 'models');
-        self::assertSame(['class', 'id', 'event'], self::inputs(Definitions::explain($words)));
-        self::assertSame(['model', 'id', 'event'], self::inputs(Definitions::explain($words, 'model')));
+        self::assertSame(['class', 'id', 'event', 'json'], self::inputs(Definitions::explain($words)));
+        self::assertSame(['model', 'id', 'event', 'json'], self::inputs(Definitions::explain($words, 'model')));
         self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], self::inputs(Definitions::check()));
         self::assertSame(OptionDefinition::LIST, Definitions::check()->option('host')->mode);
         self::assertSame(['urls', 'force', 'dryRun', 'json'], self::inputs(Definitions::submit()));
