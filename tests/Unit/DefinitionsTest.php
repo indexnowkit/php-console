@@ -42,7 +42,7 @@ final class DefinitionsTest extends TestCase
         self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], self::inputs(Definitions::check()));
         self::assertSame(OptionDefinition::LIST, Definitions::check()->option('host')->mode);
         self::assertSame(['urls', 'force', 'dryRun', 'json'], self::inputs(Definitions::submit()));
-        self::assertSame(['length', 'alphanumeric', 'writeEnv', 'force'], self::inputs(Definitions::keyGenerate()));
+        self::assertSame(['length', 'alphanumeric', 'writeEnv', 'force', 'noPrevious', 'yes'], self::inputs(Definitions::keyGenerate()));
         self::assertStringContainsString('(default .env.local)', Definitions::keyGenerate('.env.local')->option('write-env')->description);
         self::assertSame('l', Definitions::keyGenerate()->option('length')->shortcut);
         self::assertSame('32', Definitions::keyGenerate()->option('length')->default);
@@ -94,7 +94,7 @@ final class DefinitionsTest extends TestCase
         Definitions::keyGenerate('.env.local')->applyTo($command);
         $definition = $command->getDefinition();
         self::assertSame('Generate a new IndexNow key (optionally write INDEXNOW_KEY to .env.local)', $command->getDescription());
-        self::assertSame(['length', 'alphanumeric', 'write-env', 'force'], array_keys($definition->getOptions()));
+        self::assertSame(['length', 'alphanumeric', 'write-env', 'force', 'no-previous', 'yes'], array_keys($definition->getOptions()));
         self::assertSame('l', $definition->getOption('length')->getShortcut());
         self::assertSame('32', $definition->getOption('length')->getDefault());
         self::assertTrue($definition->getOption('length')->isValueRequired());

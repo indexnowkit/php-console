@@ -351,10 +351,36 @@ final class RunnersTest extends TestCase
             self::assertStringContainsString('nothing to do', $this->output->fetch());
             self::assertSame($first, file_get_contents($file));
 
+            preg_match('/^INDEXNOW_KEY=(.+)$/m', $first, $m);
+            $firstKey = $m[1];
             self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $file, force: true));
-            self::assertStringContainsString('Rotating the key', $this->output->fetch());
-            self::assertNotSame($first, file_get_contents($file));
-            self::assertSame(1, preg_match_all('/^INDEXNOW_KEY=/m', (string) file_get_contents($file)));
+            $display = $this->output->fetch();
+            self::assertStringContainsString('Rotating the key', $display);
+            self::assertStringContainsString('is kept as INDEXNOW_PREVIOUS_KEY', $display);
+            self::assertStringNotContainsString($firstKey, $display, 'the old key is masked');
+            $second = (string) file_get_contents($file);
+            self::assertNotSame($first, $second);
+            self::assertMatchesRegularExpression('/^APP_NAME=x\nINDEXNOW_KEY=[a-f0-9]{32}\nINDEXNOW_PREVIOUS_KEY=' . $firstKey . '\n$/', $second, 'the old key moves to INDEXNOW_PREVIOUS_KEY, right after the key');
+            self::assertSame(1, preg_match_all('/^INDEXNOW_KEY=/m', $second));
+
+            self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), envFile: $file, force: true), 'a second rotation while the previous key is still set is refused');
+            self::assertStringContainsString('INDEXNOW_PREVIOUS_KEY is still set from an earlier rotation', $this->output->fetch());
+            self::assertSame($second, file_get_contents($file), 'nothing written');
+
+            self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $file, force: true, yes: true));
+            $this->output->fetch();
+            $third = (string) file_get_contents($file);
+            preg_match('/^INDEXNOW_KEY=(.+)$/m', $second, $m);
+            self::assertMatchesRegularExpression('/^APP_NAME=x\nINDEXNOW_KEY=[a-f0-9]{32}\nINDEXNOW_PREVIOUS_KEY=' . $m[1] . '\n$/', $third, '--yes overwrites the previous key with the key just replaced');
+            self::assertStringNotContainsString($firstKey, $third, 'the key of the first rotation is gone');
+
+            self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $file, force: true, noPrevious: true));
+            self::assertMatchesRegularExpression('/^APP_NAME=x\nINDEXNOW_KEY=[a-f0-9]{32}\n$/', (string) file_get_contents($file), '--no-previous drops INDEXNOW_PREVIOUS_KEY');
+            self::assertStringNotContainsString('is kept as', $this->output->fetch());
+
+            file_put_contents($file, "INDEXNOW_PREVIOUS_KEY=\nINDEXNOW_KEY=\"" . $firstKey . "\"\n");
+            self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $file, force: true), 'an empty INDEXNOW_PREVIOUS_KEY does not count as set');
+            self::assertMatchesRegularExpression('/^INDEXNOW_PREVIOUS_KEY=' . $firstKey . '\nINDEXNOW_KEY=[a-f0-9]{32}\n$/', (string) file_get_contents($file), 'the existing line is reused, quotes are stripped from the old value');
         } finally {
             @unlink($file);
         }

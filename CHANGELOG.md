@@ -16,6 +16,11 @@ contain breaking changes, listed under "Changed". What the compatibility promise
   the report elsewhere.
 - `OptionDefinition::LIST` / `OptionDefinition::list()`: a repeatable value option — `--name=a --name=b` in
   symfony/console, `{--name=* : …}` in an artisan signature, an `array` property (`--name=a,b`) in a Yii controller.
+- **Key rotation keeps the old key** (spec 17 §5.2). `key:generate --write-env --force` writes the replaced key as
+  `INDEXNOW_PREVIOUS_KEY` (an existing line is reused, else added after `INDEXNOW_KEY`) and refuses to rotate while
+  that variable still holds the key of an earlier rotation (`KeyGenerateRunner::PREVIOUS_KEY_STILL_SET`, exit 1,
+  nothing written). New flags `--no-previous` (rotate and drop the variable) and `--yes` (overwrite it);
+  `KeyGenerateRunner::run()` takes them as appended `bool $noPrevious = false, bool $yes = false`.
 
 ## [0.1.0] — 2026-09-06
 

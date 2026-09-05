@@ -102,7 +102,9 @@ final class Definitions
                 OptionDefinition::value('length', 'Key length (8-128)', '32', 'l'),
                 OptionDefinition::flag('alphanumeric', 'Use the full alphanumeric alphabet instead of hex'),
                 OptionDefinition::optionalValue('write-env', \sprintf('Write INDEXNOW_KEY=<key> to this env file (default %s); idempotent', $defaultEnvFile)),
-                OptionDefinition::flag('force', 'Replace an existing INDEXNOW_KEY line in the env file (key rotation)'),
+                OptionDefinition::flag('force', 'Replace an existing INDEXNOW_KEY line in the env file (key rotation); the old key becomes INDEXNOW_PREVIOUS_KEY'),
+                OptionDefinition::flag('no-previous', 'Rotate without keeping the old key as INDEXNOW_PREVIOUS_KEY (drops the variable)'),
+                OptionDefinition::flag('yes', 'Rotate even when INDEXNOW_PREVIOUS_KEY is still set from an earlier rotation, overwriting it'),
             ],
         );
     }
