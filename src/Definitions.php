@@ -17,7 +17,11 @@ final class Definitions
 {
     private function __construct() {}
 
-    /** `check`: {@see CheckRunner::run()}. */
+    /**
+     * `check`: {@see CheckRunner::run()}. `--sample` and `--sample-class` are not inputs of the runner: the adapter
+     * hands them to the `Check\SampleCheck` of `indexnowkit/verify` among the checker's extra checks (without the
+     * package they are an error naming the install line).
+     */
     public static function check(): CommandDefinition
     {
         return new CommandDefinition(
@@ -29,6 +33,8 @@ final class Definitions
                 OptionDefinition::value('probe-url', 'Page to send with --live (default: https://<host>/; give a real page when the root redirects)'),
                 OptionDefinition::flag('json', 'Machine-readable report (schema: docs/check.schema.json of indexnowkit/console): status, environment, items with level, code, message, host'),
                 OptionDefinition::flag('strict', 'Exit 1 on warnings too, not only on errors (deploy pipelines)'),
+                OptionDefinition::list('sample', 'Fetch this URL and report what an engine would see: status, noindex, canonical, robots.txt (repeatable; needs indexnowkit/verify; warnings only)'),
+                OptionDefinition::list('sample-class', 'Same for the URLs of up to three objects of an #[IndexNow] class (<FQCN>), or of one (<FQCN>:<id>); repeatable; needs indexnowkit/verify'),
             ],
         );
     }

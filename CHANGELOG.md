@@ -3,6 +3,22 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: SemVer; until 1.0 minor versions may
 contain breaking changes, listed under "Changed". What the compatibility promise covers: [docs/bc.md](docs/bc.md).
 
+## [0.3.0] — Unreleased
+
+### Added
+
+- **`check --sample=<url>` and `--sample-class=<FQCN>[:<id>]`** (both repeatable) in `Definitions::check()`: the
+  `Verify\Check\SampleCheck` of `indexnowkit/verify` fetches every sample and prints what an engine would see
+  (status, noindex, canonical, robots.txt), warnings only. The adapters hand the options to the check; without the
+  package they are an error naming the install line. `CheckRunner::run()` did not change.
+- **`ConfigRunner::run(..., array $packages = [])`** (appended): the effective block of every installed optional
+  package by its name (`verify` => `VerifyConfig::toArray()`, `history` => `HistoryConfig::toArray()`), printed as
+  a top-level section of `config --json` and as a table of its own — not among the adapter-only keys.
+
+### Changed
+
+- Requires `indexnowkit/core ^0.9`.
+
 ## [0.2.0] — 2026-09-06
 
 ### Changed

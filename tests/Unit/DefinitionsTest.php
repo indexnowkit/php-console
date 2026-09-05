@@ -39,7 +39,9 @@ final class DefinitionsTest extends TestCase
         $words = new Vocabulary(subject: 'model', subjects: 'models');
         self::assertSame(['class', 'id', 'event', 'json'], self::inputs(Definitions::explain($words)));
         self::assertSame(['model', 'id', 'event', 'json'], self::inputs(Definitions::explain($words, 'model')));
-        self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], self::inputs(Definitions::check()));
+        self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict', 'sample', 'sampleClass'], self::inputs(Definitions::check()));
+        self::assertSame(OptionDefinition::LIST, Definitions::check()->option('sample')->mode);
+        self::assertSame(OptionDefinition::LIST, Definitions::check()->option('sample-class')->mode);
         self::assertSame(OptionDefinition::LIST, Definitions::check()->option('host')->mode);
         self::assertSame(['urls', 'force', 'dryRun', 'json'], self::inputs(Definitions::submit()));
         self::assertSame(['json'], self::inputs(Definitions::config()));
@@ -57,7 +59,7 @@ final class DefinitionsTest extends TestCase
             Definitions::check()->option('nope');
             self::fail();
         } catch (InvalidArgumentException $e) {
-            self::assertSame('The command has no option "nope"; it has: live, host, probe-url, json, strict.', $e->getMessage());
+            self::assertSame('The command has no option "nope"; it has: live, host, probe-url, json, strict, sample, sample-class.', $e->getMessage());
         }
         try {
             Definitions::check()->argument('nope');
@@ -129,7 +131,7 @@ final class DefinitionsTest extends TestCase
         $definition = Definitions::submitSubjects(new Vocabulary(subject: 'record', subjects: 'records'));
         self::assertSame(['event', 'limit', 'explain', 'force', 'dryRun', 'json'], $definition->yiiOptions());
         self::assertSame(['f' => 'force'], $definition->yiiAliases());
-        self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict'], Definitions::check()->yiiOptions());
+        self::assertSame(['live', 'host', 'probeUrl', 'json', 'strict', 'sample', 'sampleClass'], Definitions::check()->yiiOptions());
         self::assertSame(['l' => 'length'], Definitions::keyGenerate()->yiiAliases());
         self::assertSame('allowForeignHosts', (new OptionDefinition('allow-foreign-hosts', ''))->property());
         self::assertSame([], (new CommandDefinition('x', [ArgumentDefinition::optional('a', 'b')]))->yiiOptions());

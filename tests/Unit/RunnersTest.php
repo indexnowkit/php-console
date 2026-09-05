@@ -567,6 +567,21 @@ final class RunnersTest extends TestCase
         self::assertSame(['https://api.indexnow.org/indexnow'], $decoded['endpoints']);
         self::assertIsString($decoded['core']);
 
+        $withPackages = $raw + ['verify' => ['enabled' => true, 'redirect' => 'follow'], 'history' => ['store' => 'pdo']];
+        $packages = ['verify' => ['enabled' => true, 'redirect' => 'follow', 'non_canonical' => 'skip'], 'history' => ['store' => 'pdo', 'limit' => 500]];
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $withPackages, true, $packages));
+        $decoded = json_decode($this->output->fetch(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame(['config', 'adapter', 'verify', 'history', 'endpoints', 'core'], array_keys($decoded), 'the blocks of installed packages are sections of their own');
+        self::assertSame($packages['verify'], $decoded['verify']);
+        self::assertSame($packages['history'], $decoded['history']);
+        self::assertArrayNotHasKey('verify', $decoded['adapter'], 'not among the adapter-only keys');
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $withPackages, false, $packages));
+        $display = $this->output->fetch();
+        self::assertStringContainsString('Verify option', $display);
+        self::assertStringContainsString('verify.redirect', $display);
+        self::assertStringContainsString('history.limit', $display);
+
         self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $raw));
         $display = $this->output->fetch();
         self::assertStringContainsString('IndexNow configuration', $display);

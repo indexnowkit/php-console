@@ -23,13 +23,17 @@ final class ConfigRunner
 
     /**
      * @param callable(): Config   $buildConfig builds the Config from the raw adapter configuration; throws ConfigurationException when invalid
-     * @param array<string, mixed> $raw         the adapter's raw configuration array (its own blocks included), for the adapter-only keys
-     * @param bool                 $json        one JSON document instead of the dotted table
+     * @param array<string, mixed>                $raw         the adapter's raw configuration array (its own blocks included), for the adapter-only keys
+     * @param bool                                $json        one JSON document instead of the dotted table
+     * @param array<string, array<string, mixed>> $packages    the effective block of every installed optional package, by its
+     *                                                         name (`verify` => `VerifyConfig::toArray()`): printed as a section
+     *                                                         of its own, not among the adapter-only keys
      *
      * @return int exit code ({@see ExitCode})
      */
-    public function run(SymfonyStyle $io, callable $buildConfig, array $raw = [], bool $json = false): int
+    public function run(SymfonyStyle $io, callable $buildConfig, array $raw = [], bool $json = false, array $packages = []): int
     {
+        $raw = array_diff_key($raw, $packages);
         try {
             $config = $buildConfig();
         } catch (ConfigurationException $e) {
@@ -44,7 +48,7 @@ final class ConfigRunner
         $effective = self::masked($config->toArray());
         $adapter = self::adapterOnly($raw);
         if ($json) {
-            $io->writeln((string) json_encode(['config' => $effective, 'adapter' => $adapter, 'endpoints' => $config->endpoints, 'core' => Version::get()], self::JSON_FLAGS));
+            $io->writeln((string) json_encode(['config' => $effective, 'adapter' => $adapter] + $packages + ['endpoints' => $config->endpoints, 'core' => Version::get()], self::JSON_FLAGS));
 
             return ExitCode::SUCCESS;
         }
@@ -61,6 +65,13 @@ final class ConfigRunner
                 $rows[] = [$key, self::render($value)];
             }
             $io->table(['Adapter option', 'Value'], $rows);
+        }
+        foreach ($packages as $package => $block) {
+            $rows = [];
+            foreach (self::flatten($block) as $key => $value) {
+                $rows[] = [$package . '.' . $key, self::render($value)];
+            }
+            $io->table([ucfirst($package) . ' option', 'Value'], $rows);
         }
         $io->text(\sprintf('Endpoints: %s. Core %s. Machine-readable: --json.', implode(', ', $config->endpoints), Version::get()));
 
