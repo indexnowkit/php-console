@@ -46,7 +46,8 @@ final class KeyGenerateRunner
             return ExitCode::SUCCESS;
         }
 
-        $contents = is_file($envFile) ? (string) file_get_contents($envFile) : '';
+        $existed = is_file($envFile);
+        $contents = $existed ? (string) file_get_contents($envFile) : '';
         $line = 'INDEXNOW_KEY=' . $key;
         if (preg_match(self::KEY_LINE, $contents, $current) === 1) {
             if (!$force) {
@@ -70,6 +71,9 @@ final class KeyGenerateRunner
             $io->error(\sprintf('Cannot write %s.', $envFile));
 
             return ExitCode::FAILURE;
+        }
+        if (!$existed) {
+            @chmod($envFile, 0o600); // a file this command creates holds the key: readable by its owner only, whatever the umask
         }
         $io->writeln(\sprintf('<info>INDEXNOW_KEY written to %s.</info>', $envFile));
         if (isset($previous) && !$noPrevious && $previous !== '') {

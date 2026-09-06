@@ -47,6 +47,7 @@ final class ConfigRunner
         }
         $effective = self::masked($config->toArray());
         $adapter = self::adapterOnly($raw);
+        $packages = array_map(static fn(array $block): array => self::maskedBlock($block), $packages);
         if ($json) {
             $io->writeln((string) json_encode(['config' => $effective, 'adapter' => $adapter] + $packages + ['endpoints' => $config->endpoints, 'core' => Version::get()], self::JSON_FLAGS));
 
@@ -79,7 +80,8 @@ final class ConfigRunner
     }
 
     /**
-     * Keys masked to four characters: `key`, `previous_key`, and both inside every `hosts` entry.
+     * Keys masked to four characters: `key`, `previous_key`, and both inside every `hosts` entry; `key_location` (global
+     * and per host) with the key it contains masked the same way — by default the URL is `https://host/<key>.txt`.
      *
      * @param array<string, mixed> $config
      *
@@ -87,18 +89,22 @@ final class ConfigRunner
      */
     public static function masked(array $config): array
     {
+        $keys = [];
         foreach (['key', 'previous_key'] as $name) {
             if (\is_string($config[$name] ?? null)) {
+                $keys[] = $config[$name];
                 $config[$name] = KeyValidator::mask($config[$name]);
             }
         }
         $hosts = [];
         foreach (\is_array($config['hosts'] ?? null) ? $config['hosts'] : [] as $host => $entry) {
             if (\is_string($entry)) {
+                $keys[] = $entry;
                 $hosts[$host] = KeyValidator::mask($entry);
             } elseif (\is_array($entry)) {
                 foreach (['key', 'previous_key'] as $name) {
                     if (\is_string($entry[$name] ?? null)) {
+                        $keys[] = $entry[$name];
                         $entry[$name] = KeyValidator::mask($entry[$name]);
                     }
                 }
@@ -106,8 +112,65 @@ final class ConfigRunner
             }
         }
         $config['hosts'] = $hosts;
+        if (\is_string($config['key_location'] ?? null)) {
+            $config['key_location'] = self::maskKeys($config['key_location'], $keys);
+        }
+        foreach ($hosts as $host => $entry) {
+            if (\is_array($entry) && \is_string($entry['key_location'] ?? null)) {
+                $entry['key_location'] = self::maskKeys($entry['key_location'], $keys);
+                $hosts[$host] = $entry;
+            }
+        }
+        $config['hosts'] = $hosts;
 
         return $config;
+    }
+
+    /**
+     * The block of an optional package with its secrets masked: a `dsn` anywhere in it loses its password and userinfo
+     * (`history.pdo.dsn` — for pgsql the password can only live in the DSN), a `password`/`secret`/`token` key is masked
+     * whole. Packages need not declare anything: the names are the convention.
+     *
+     * @param array<array-key, mixed> $block
+     *
+     * @return array<array-key, mixed>
+     */
+    public static function maskedBlock(array $block): array
+    {
+        foreach ($block as $name => $value) {
+            if (\is_array($value)) {
+                $block[$name] = self::maskedBlock($value);
+            } elseif (\is_string($value) && \is_string($name)) {
+                $block[$name] = match (true) {
+                    str_ends_with($name, 'dsn') => self::maskDsn($value),
+                    \in_array($name, ['password', 'secret', 'token'], true) => '****',
+                    default => $value,
+                };
+            }
+        }
+
+        return $block;
+    }
+
+    /** `mysql:host=db;dbname=app;user=app;password=s3cret` and `pgsql://app:s3cret@db/app` with the secrets replaced by `****`. */
+    public static function maskDsn(string $dsn): string
+    {
+        $dsn = (string) preg_replace('/\b(password|passwd|pwd|pass)=([^;\s]*)/i', '$1=****', $dsn);
+        $dsn = (string) preg_replace('/\b(user|username|uid)=([^;\s]*)/i', '$1=****', $dsn);
+
+        return (string) preg_replace('#^([a-z][a-z0-9+.-]*://)([^/@\s]+)@#i', '$1****@', $dsn);
+    }
+
+    /**
+     * @param list<string> $keys
+     */
+    private static function maskKeys(string $text, array $keys): string
+    {
+        foreach ($keys as $key) {
+            $text = str_replace($key, KeyValidator::mask($key), $text);
+        }
+
+        return $text;
     }
 
     /**

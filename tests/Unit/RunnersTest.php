@@ -547,15 +547,24 @@ final class RunnersTest extends TestCase
     #[TestDox('config: the effective configuration with masked keys and the adapter-only keys, as a table or as JSON; an invalid configuration is a FAILURE')]
     public function testConfig(): void
     {
-        $raw = ['key' => Factory::KEY, 'hosts' => ['b.example.com' => Factory::KEY, 'c.example.com' => ['key' => Factory::KEY, 'previous_key' => 'oldkey1234567890']], 'base_url' => 'https://www.example.com', 'debounce' => ['per_url' => 30], 'queue' => ['connection' => 'redis'], 'eloquent' => ['enabled' => false], 'messenger' => ['transport' => 'async']];
+        $raw = ['key' => Factory::KEY, 'key_location' => 'https://www.example.com/' . Factory::KEY . '.txt', 'hosts' => ['b.example.com' => Factory::KEY, 'c.example.com' => ['key' => Factory::KEY, 'previous_key' => 'oldkey1234567890', 'key_location' => 'https://c.example.com/keys/oldkey1234567890.txt']], 'base_url' => 'https://www.example.com', 'debounce' => ['per_url' => 30], 'queue' => ['connection' => 'redis'], 'eloquent' => ['enabled' => false], 'messenger' => ['transport' => 'async']];
+        $packages = ['history' => ['store' => 'pdo', 'pdo' => ['dsn' => 'pgsql:host=db;dbname=app;user=app;password=s3cret-pass', 'service' => null, 'table' => 'indexnow_submissions']], 'other' => ['dsn' => 'mysql://root:topsecret@db/app', 'token' => 'tok-123', 'plain' => 'kept']];
         $runner = new ConfigRunner(new Vocabulary(configLocation: 'config/indexnow.php'));
 
-        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $raw, true));
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), static fn(): Config => Config::fromArray($raw), $raw, true, $packages));
         $raw_output = $this->output->fetch();
         $decoded = json_decode($raw_output, true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($decoded);
-        self::assertStringNotContainsString(Factory::KEY, $raw_output, 'keys are masked everywhere');
+        self::assertStringNotContainsString(Factory::KEY, $raw_output, 'keys are masked everywhere, key_location included');
         self::assertStringNotContainsString('oldkey1234567890', $raw_output);
+        self::assertStringNotContainsString('s3cret-pass', $raw_output, 'a DSN password of a package block is masked');
+        self::assertStringNotContainsString('topsecret', $raw_output);
+        self::assertStringNotContainsString('tok-123', $raw_output);
+        self::assertSame('pgsql:host=db;dbname=app;user=****;password=****', $decoded['history']['pdo']['dsn']);
+        self::assertSame('mysql://****@db/app', $decoded['other']['dsn']);
+        self::assertSame('kept', $decoded['other']['plain']);
+        self::assertSame('https://www.example.com/' . KeyValidator::mask(Factory::KEY) . '.txt', $decoded['config']['key_location']);
+        self::assertSame('https://c.example.com/keys/' . KeyValidator::mask('oldkey1234567890') . '.txt', $decoded['config']['hosts']['c.example.com']['key_location']);
         self::assertSame(KeyValidator::mask(Factory::KEY), $decoded['config']['key']);
         self::assertSame(KeyValidator::mask(Factory::KEY), $decoded['config']['hosts']['b.example.com']);
         self::assertSame(KeyValidator::mask('oldkey1234567890'), $decoded['config']['hosts']['c.example.com']['previous_key']);

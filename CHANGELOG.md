@@ -3,6 +3,19 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: SemVer; until 1.0 minor versions may
 contain breaking changes, listed under "Changed". What the compatibility promise covers: [docs/bc.md](docs/bc.md).
 
+## [0.4.0] — Unreleased
+
+### Changed
+
+- **`indexnow:config` masks the secrets of optional packages too** (`ConfigRunner::maskedBlock()`): a `dsn` anywhere in a
+  package block loses its password, user and userinfo (`history.pdo.dsn` — for pgsql the password can only live in the
+  DSN), a `password`/`secret`/`token` key is masked whole. Before, only the core block was masked and the description
+  "keys masked (paste it into a bug report)" invited a production database password into an issue.
+- **`key_location` is masked** (global and per host): by default it is `https://host/<key>.txt`, and it went out in full.
+- `indexnow:key:generate --env-file` creates a new env file with mode 0600.
+- `ExplainRunner` reads with the extractor of the facade, which is the resolver's since core 0.11.
+- Requires `indexnowkit/core ^0.11`.
+
 ## [0.3.1] — 2026-09-06
 
 ### Changed
