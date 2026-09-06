@@ -9,7 +9,6 @@ use Closure;
 use IndexNowKit\Attribute\Param\Condition;
 use IndexNowKit\Attribute\Param\Equals;
 use IndexNowKit\Attribute\Param\FieldCondition;
-use IndexNowKit\Attribute\ParamExtractor;
 use IndexNowKit\Attribute\UrlRule;
 use IndexNowKit\Config;
 use IndexNowKit\Debounce\DebounceStoreInterface;
@@ -173,11 +172,11 @@ final class ExplainRunner
         $reads = \is_string($condition) || $condition instanceof FieldCondition;
         try {
             $value = match (true) {
-                \is_string($condition) => ParamExtractor::read($object, $condition),
-                $condition instanceof FieldCondition => ParamExtractor::read($object, $condition->field()),
+                \is_string($condition) => $this->indexNow->extractor->read($object, $condition),
+                $condition instanceof FieldCondition => $this->indexNow->extractor->read($object, $condition->field()),
                 default => null,
             };
-            $holds = ParamExtractor::condition($object, $condition);
+            $holds = $this->indexNow->extractor->condition($object, $condition);
         } catch (Throwable $e) {
             return ['condition' => $described, 'reads' => $reads, 'value' => null, 'holds' => null, 'hint' => null, 'error' => $e->getMessage()];
         }
