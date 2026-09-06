@@ -7,6 +7,7 @@ namespace IndexNowKit\Console\Tests\Unit;
 use IndexNowKit\Adapter\SubmitterFactory;
 use IndexNowKit\Attribute\AttributeReader;
 use IndexNowKit\Attribute\IndexNow;
+use IndexNowKit\Attribute\ParamExtractor;
 use IndexNowKit\Check\Checker;
 use IndexNowKit\Check\CheckInterface;
 use IndexNowKit\Check\CheckReport;
@@ -137,7 +138,7 @@ final class RunnersTest extends TestCase
      */
     private function kit(array $overrides = []): IndexNowKit
     {
-        return IndexNowKit::create(Factory::config($overrides), $this->transport, resolver: new AttributeUrlResolver(new AttributeReader()));
+        return IndexNowKit::create(Factory::config($overrides), $this->transport, resolver: new AttributeUrlResolver(new AttributeReader(), ParamExtractor::plain()));
     }
 
     private function submitters(IndexNowKit $kit): SubmitterFactory

@@ -3,6 +3,13 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: SemVer; until 1.0 minor versions may
 contain breaking changes, listed under "Changed". What the compatibility promise covers: [docs/bc.md](docs/bc.md).
 
+## [0.4.1] — Unreleased
+
+### Changed
+
+- `explain` accepts a `FieldCondition` in `when` next to a `Condition` (core 0.12.0 splits the two interfaces).
+- Requires `indexnowkit/core ^0.12`.
+
 ## [0.4.0] — 2026-09-07
 
 ### Changed

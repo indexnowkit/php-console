@@ -166,7 +166,7 @@ final class ExplainRunner
      *
      * @return array{condition: string, reads: bool, value: mixed, holds: ?bool, hint: ?string, error: ?string}
      */
-    private function explainCondition(object $object, string|Condition|Closure $condition): array
+    private function explainCondition(object $object, string|Condition|FieldCondition|Closure $condition): array
     {
         $described = self::describeCondition($condition);
         $reads = \is_string($condition) || $condition instanceof FieldCondition;
@@ -218,7 +218,7 @@ final class ExplainRunner
         }
     }
 
-    private static function describeCondition(string|Condition|Closure $condition): string
+    private static function describeCondition(string|Condition|FieldCondition|Closure $condition): string
     {
         return match (true) {
             \is_string($condition) => $condition,
