@@ -23,12 +23,12 @@ abstract class AbstractSubjectLoader implements SubjectLoaderInterface
 {
     private readonly ClassNameResolver $classes;
 
-    /** @var (Closure(string): bool) */
+    /** @var (Closure(class-string): bool) */
     private readonly Closure $accepts;
 
     /**
      * @param list<string>                  $namespaces namespaces a short class name is looked up in
-     * @param class-string|Closure(string): bool $marker the class or interface a subject class must extend or implement
+     * @param class-string|Closure(class-string): bool $marker the class or interface a subject class must extend or implement
      *                                                   (`Model::class`, `ActiveRecordInterface::class`), or a predicate
      *                                                   when the ORM has no marker (a managed Doctrine entity)
      * @param string                        $noun       what the texts call an accepted class: `an Eloquent model`, `an ActiveRecord class`
