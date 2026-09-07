@@ -30,12 +30,12 @@ final class SubmitSubjectsCommandTest extends TestCase
         $this->loader = Runners::loader();
     }
 
-    private function command(?Vocabulary $words = null): SubmitSubjectsCommand
+    private function command(?Vocabulary $words = null, string $classArgument = 'class'): SubmitSubjectsCommand
     {
         $words ??= new Vocabulary('entity', 'entities', 'bin/console', 'indexnow:submit-entity');
         $kit = Runners::kit($this->transport);
 
-        return new SubmitSubjectsCommand(new SubmitSubjectsRunner($kit, $this->loader, Runners::submitters($kit, $this->transport), words: $words), $words);
+        return new SubmitSubjectsCommand(new SubmitSubjectsRunner($kit, $this->loader, Runners::submitters($kit, $this->transport), words: $words), $words, $classArgument);
     }
 
     /**
@@ -64,6 +64,18 @@ final class SubmitSubjectsCommandTest extends TestCase
         self::assertSame(['class', 'ids'], array_keys($record->getDefinition()->getArguments()));
         self::assertSame(['event', 'limit', 'explain', 'force', 'dry-run', 'json'], array_keys($record->getDefinition()->getOptions()));
         self::assertSame((string) SubmitSubjectsOptions::DEFAULT_LIMIT, $record->getDefinition()->getOption('limit')->getDefault());
+    }
+
+    #[TestDox('the class argument is named by the adapter (model in Laravel): the definition and the runner both read it')]
+    public function testClassArgumentName(): void
+    {
+        $command = $this->command(new Vocabulary('model', 'models', 'php artisan', 'indexnow:submit-model'), 'model');
+        self::assertSame(['model', 'ids'], array_keys($command->getDefinition()->getArguments()));
+        self::assertSame('Model class (FQCN or short name)', $command->getDefinition()->getArgument('model')->getDescription());
+
+        $tester = new CommandTester($command);
+        self::assertSame(ExitCode::SUCCESS, $tester->execute(['model' => ConsolePost::class, 'ids' => ['1']]));
+        self::assertSame(['https://www.example.com/posts/one'], $this->sentUrls());
     }
 
     #[TestDox('class and ids reach the runner: every object of the class up to --limit, or the given ids; --explain sends nothing')]

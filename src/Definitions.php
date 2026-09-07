@@ -7,7 +7,7 @@ namespace IndexNowKit\Console;
 /**
  * The arguments and options of every command the core runners serve, declared once: names, shortcuts, defaults
  * and descriptions are the same in `bin/console`, `artisan` and `php yii`. Adapters render them with
- * {@see CommandDefinition::applyTo()}, {@see CommandDefinition::laravelSignature()} and
+ * {@see CommandDefinition::applyTo()} (symfony/console, which artisan runs on too) and
  * {@see CommandDefinition::yiiOptions()}; the sitemap package adds its own `Sitemap\Console\Definitions`.
  *
  * Every definition covers the constructor of the options object its runner takes (`SubmitSubjectsOptions`), and a

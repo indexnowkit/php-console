@@ -11,9 +11,9 @@ use Symfony\Component\Console\Input\InputOption;
 
 /**
  * The arguments and options of one command, declared once ({@see Definitions}) and rendered for each framework:
- * {@see applyTo()} for a symfony/console command, {@see laravelSignature()} for an artisan `$signature`,
- * {@see yiiOptions()} / {@see yiiAliases()} for a Yii console controller. Every framework then prints the same
- * names, shortcuts, defaults and descriptions.
+ * {@see applyTo()} for a symfony/console command (the bundle, Yii3 and, since wave M, artisan register the command
+ * classes of this package), {@see yiiOptions()} / {@see yiiAliases()} for a Yii2 console controller. Every framework
+ * then prints the same names, shortcuts, defaults and descriptions.
  */
 final readonly class CommandDefinition
 {
@@ -72,30 +72,6 @@ final readonly class CommandDefinition
             };
             $command->addOption($option->name, $option->shortcut, $mode, $option->description, $default);
         }
-    }
-
-    /**
-     * Laravel: the `$signature` of an artisan command (`indexnow:check {--live : ...}`), one line per input.
-     * An OPTIONAL_VALUE option renders as `{--name= : ...}`; `Input::hasParameterOption('--name')` tells "given
-     * without a value" from "not given". A LIST option renders as `{--name=* : ...}` and `option('name')` is an array.
-     */
-    public function laravelSignature(string $command): string
-    {
-        $lines = [$command];
-        foreach ($this->arguments as $argument) {
-            $lines[] = \sprintf('{%s%s%s : %s}', $argument->name, $argument->required ? '' : '?', $argument->array ? '*' : '', $argument->description);
-        }
-        foreach ($this->options as $option) {
-            $name = ($option->shortcut !== null ? $option->shortcut . '|' : '') . $option->name;
-            $lines[] = match ($option->mode) {
-                OptionDefinition::FLAG => \sprintf('{--%s : %s}', $name, $option->description),
-                OptionDefinition::VALUE => \sprintf('{--%s=%s : %s}', $name, $option->default ?? '', $option->description),
-                OptionDefinition::LIST => \sprintf('{--%s=* : %s}', $name, $option->description),
-                default => \sprintf('{--%s= : %s}', $name, $option->description),
-            };
-        }
-
-        return implode("\n        ", $lines);
     }
 
     /**

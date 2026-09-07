@@ -69,27 +69,6 @@ final class DefinitionsTest extends TestCase
         }
     }
 
-    #[TestDox('laravelSignature() renders the artisan signature: arguments with ?/*, options with shortcut, default and optional value')]
-    public function testLaravelSignature(): void
-    {
-        $words = new Vocabulary(subject: 'model', subjects: 'models');
-        $expected = <<<'SIG'
-            indexnow:submit-model
-                    {model : Model class (FQCN or short name)}
-                    {ids?* : Identifiers; none = every model of the class up to --limit}
-                    {--event=updated : created | updated | deleted}
-                    {--limit=1000 : Max models when no ids are given}
-                    {--explain : Show which rule produced which URL and submit nothing}
-                    {--f|force : Ignore the debounce store}
-                    {--dry-run : Log the request instead of sending it}
-                    {--json : Machine-readable output}
-            SIG;
-        self::assertSame($expected, Definitions::submitSubjects($words, 'model')->laravelSignature('indexnow:submit-model'));
-        self::assertStringContainsString("{--write-env= : Write INDEXNOW_KEY=<key> to this env file (default .env); idempotent}", Definitions::keyGenerate()->laravelSignature('indexnow:key:generate'));
-        self::assertStringContainsString('{urls* : Absolute URLs or paths relative to base_url}', Definitions::submit()->laravelSignature('indexnow:submit'));
-        self::assertStringContainsString('{--host=* : Check only this host (repeatable; multi-domain setups)}', Definitions::check()->laravelSignature('indexnow:check'), 'a LIST option is --name=*');
-    }
-
     #[TestDox('applyTo() configures a symfony/console command with the same inputs')]
     public function testApplyTo(): void
     {

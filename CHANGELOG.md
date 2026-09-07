@@ -24,8 +24,28 @@ contain breaking changes, listed under "Changed". What the compatibility promise
   packages — as one object per adapter instead of three constructor arguments. "Implement" tier: methods are not
   added without a major version (before 1.0: without a minor listed under "Changed").
 - `KeyGenerateCommand::DEFAULT_LENGTH` (`32`).
+- **`Command\SubmitSubjectsCommand` and `Command\ExplainCommand` take `string $classArgument = 'class'`** (wave M, spec
+  19 §4.2), appended: the name of the class argument as the adapter's command always called it. Laravel passes
+  `'model'`, so `Artisan::call('indexnow:submit-model', ['model' => Post::class])` and the tests written against it
+  keep working once artisan registers these classes; the argument is positional on the command line either way.
+- **`SubjectSampler(SubjectLoaderInterface, IndexNowKit)`**: the `--sample-class` sampler (up to `PER_CLASS` = 3
+  subjects of a class, or the one with the id, through their rules) as one class over the adapter's loader — the
+  Symfony bundle, Laravel, Yii2 and Yii3 each carried a 38-line copy differing in the docblock and a property name
+  (72.7 % alike, Yii2 and Yii3 95.5 %). An adapter puts it into `Check\SampleOptions::$sampler`.
+- **`AbstractSubjectLoader`** ("Implement" tier): the skeleton the four ORM loaders shared — `ClassNameResolver` over
+  the adapter's namespaces with a marker class or a predicate, the guard with one text, the found/missing loop of
+  `byIds()`, the `max(1, $limit)` of `all()` — over two abstract methods, `findOne(class, id, event)` and
+  `findMany(class, limit, event)`. The adapters' loaders extend it and keep their constructors and their class names;
+  what is left in each is the ORM query.
 
 ### Changed
+
+- **`CommandDefinition::laravelSignature()` is removed** (wave M, spec 19 §6.2). Its only consumer was the Laravel
+  adapter's own artisan command classes, which are gone in laravel 0.15.0: artisan registers the command classes of
+  this package (`Illuminate\Console\Application::resolve()` takes any symfony/console command), so nothing renders a
+  `$signature` string any more. *Migration*: a command of your own that used it — `Definitions::check()->applyTo($this)`
+  on a `Symfony\Component\Console\Command\Command` registered through `$this->commands([...])`, or keep a copy of the
+  32-line renderer from 0.4.
 
 - Version 0.5.0 instead of 0.4.2: the classes above are additive, but `sitemap` and `history` build their commands on
   them and pin `^0.5`, so the adapters move together. The fixes below were written for 0.4.2 and ship here.

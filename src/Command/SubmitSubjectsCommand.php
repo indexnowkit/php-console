@@ -19,23 +19,27 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * `indexnow:submit-entity` in Symfony, `indexnow:submit-record` in Yii3), so there is no `#[AsCommand]` here — a
  * Symfony container registers it lazily with the `command` and `description` attributes of the `console.command`
  * tag; the description is {@see Definitions::submitSubjects()}'s, so the word "entity" / "record" comes from the
- * vocabulary in both places.
+ * vocabulary in both places. The class argument is `class` unless the adapter's command always called it
+ * otherwise (`model` in Laravel: `Artisan::call('indexnow:submit-model', ['model' => …])` keeps working).
  */
 final class SubmitSubjectsCommand extends Command
 {
-    public function __construct(private readonly SubmitSubjectsRunner $runner, private readonly Vocabulary $words)
+    /**
+     * @param string $classArgument the name of the class argument (`class`, `model`); positional on the command line either way
+     */
+    public function __construct(private readonly SubmitSubjectsRunner $runner, private readonly Vocabulary $words, private readonly string $classArgument = 'class')
     {
         parent::__construct($words->submitSubjects);
     }
 
     protected function configure(): void
     {
-        Definitions::submitSubjects($this->words)->applyTo($this);
+        Definitions::submitSubjects($this->words, $this->classArgument)->applyTo($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $class = $input->getArgument('class');
+        $class = $input->getArgument($this->classArgument);
         $event = $input->getOption('event');
         $limit = $input->getOption('limit');
         /** @var list<string> $ids */

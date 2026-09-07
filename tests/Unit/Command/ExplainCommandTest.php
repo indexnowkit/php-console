@@ -27,12 +27,12 @@ final class ExplainCommandTest extends TestCase
         $this->transport = new FakeTransport();
     }
 
-    private function command(): ExplainCommand
+    private function command(string $classArgument = 'class'): ExplainCommand
     {
         $kit = Runners::kit($this->transport);
         $words = new Vocabulary('entity', 'entities', 'bin/console', 'indexnow:submit-entity');
 
-        return new ExplainCommand(new ExplainRunner($kit, Runners::loader(), $kit->config, $kit->keys, new MemoryDebounceStore(), new UrlNormalizer($kit->config->baseUrl), $words), $words);
+        return new ExplainCommand(new ExplainRunner($kit, Runners::loader(), $kit->config, $kit->keys, new MemoryDebounceStore(), new UrlNormalizer($kit->config->baseUrl), $words), $words, $classArgument);
     }
 
     #[TestDox('indexnow:explain <class> <id> [--event] [--json]; the description names the subject of the vocabulary')]
@@ -67,6 +67,17 @@ final class ExplainCommandTest extends TestCase
         self::assertIsArray($decoded);
         self::assertSame(ConsoleArticle::class, $decoded['class']);
         self::assertSame('1', $decoded['id']);
+    }
+
+    #[TestDox('the class argument is named by the adapter (model in Laravel)')]
+    public function testClassArgumentName(): void
+    {
+        $command = $this->command('model');
+        self::assertSame(['model', 'id'], array_keys($command->getDefinition()->getArguments()));
+
+        $tester = new CommandTester($command);
+        self::assertSame(ExitCode::SUCCESS, $tester->execute(['model' => ConsolePost::class, 'id' => '1']));
+        self::assertStringContainsString('/posts/one', $tester->getDisplay());
     }
 
     #[TestDox('an unknown id or event is INVALID')]

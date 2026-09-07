@@ -17,24 +17,28 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * `indexnow:explain <class> <id> [--event=] [--json]`: "why was this object not submitted?" — the decision path of one
  * object: rules -> event subscription -> `when` guard -> resolved URLs -> normalization -> host/key -> debounce ->
  * dispatch. Sends nothing. The description here names an "object"; {@see Definitions::explain()} rewrites it with
- * the adapter's word in `configure()`.
+ * the adapter's word in `configure()`. The class argument is `class` unless the adapter's command always called it
+ * otherwise (`model` in Laravel).
  */
 #[AsCommand(name: 'indexnow:explain', description: 'Explain what IndexNow would do for one object: rules, guards, URLs, key, debounce (sends nothing)')]
 final class ExplainCommand extends Command
 {
-    public function __construct(private readonly ExplainRunner $runner, private readonly Vocabulary $words)
+    /**
+     * @param string $classArgument the name of the class argument (`class`, `model`); positional on the command line either way
+     */
+    public function __construct(private readonly ExplainRunner $runner, private readonly Vocabulary $words, private readonly string $classArgument = 'class')
     {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        Definitions::explain($this->words)->applyTo($this);
+        Definitions::explain($this->words, $this->classArgument)->applyTo($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $class = $input->getArgument('class');
+        $class = $input->getArgument($this->classArgument);
         $id = $input->getArgument('id');
         $event = $input->getOption('event');
 
