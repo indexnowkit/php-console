@@ -24,7 +24,7 @@ composer require indexnowkit/console        # brings indexnowkit/core and symfon
 ```
 
 With a framework adapter you install nothing: `indexnowkit/symfony-bundle`, `indexnowkit/laravel` and
-`indexnowkit/yii2` require this package and register the commands. `indexnowkit/sitemap` builds its `sitemap`
+`indexnowkit/yii2` and `indexnowkit/yii3` require this package and register the commands. `indexnowkit/sitemap` builds its `sitemap`
 command on it too.
 
 ## What is inside
@@ -66,7 +66,7 @@ exit($runner->run($io, static fn(): Config => Config::fromEnv(), live: true));
 ```
 
 Writing an adapter? [core/docs/adapters.md §14](https://github.com/indexnowkit/php/blob/main/packages/core/docs/adapters.md)
-walks through the six commands; the bundle, the Laravel package and the Yii2 component are the reference wirings.
+walks through the six commands; the bundle, the Laravel package, the Yii2 component and the Yii3 package are the reference wirings.
 
 ## Requirements
 
@@ -98,8 +98,8 @@ final class ReannounceCommand
   - Before core 0.7 these classes lived in `indexnowkit/core` with the same FQCN; only `Console\SubmitterFactory` (now `IndexNowKit\Adapter\SubmitterFactory`) and `Console\ResultSummary` (now `IndexNowKit\Submission\ResultSummary`) changed their namespace.
   - Option and argument names come from `Definitions` (`--force`, `--dry-run`, `--json`, `--live`, `--host`, `--probe-url`, `--limit`, `--event`, `--write-env`, `--length`): an adapter's command must not declare its own copies.
   - `--force` re-announces URLs inside the debounce window; `--dry-run` logs the request instead of sending it (`dry_run` in the configuration does the same for every submission).
-  - Manual submission is `submitEntity()` in Symfony, `submitModel()` in Laravel, `submitRecord()` in Yii2; the commands are `indexnow:submit-entity`, `indexnow:submit-model`, `indexnow/submit-record`.
-  - `dispatch: auto` exists in Symfony (`auto` | `messenger` | `sync` | `none`) and Yii2 (`auto` | `queue` | `sync` | `none`), **not** in Laravel (`queue` | `sync` | `none`).
+  - Manual submission is `submitEntity()` in Symfony, `submitModel()` in Laravel, `submitRecord()` in Yii2 and Yii3; the commands are `indexnow:submit-entity`, `indexnow:submit-model`, `indexnow/submit-record` (Yii2), `indexnow:submit-record` (Yii3).
+  - `dispatch: auto` exists in Symfony (`auto` | `messenger` | `sync` | `none`) and Yii2 (`auto` | `queue` | `sync` | `none`), **not** in Laravel (`queue` | `sync` | `none`); Yii3 has `sync` | `none` only.
 
 ## Versioning
 

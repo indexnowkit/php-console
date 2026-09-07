@@ -91,7 +91,7 @@ final class ReannounceCommand
   - До core 0.7 эти классы жили в `indexnowkit/core` с теми же FQCN; пространство имён сменили только `Console\SubmitterFactory` (теперь `IndexNowKit\Adapter\SubmitterFactory`) и `Console\ResultSummary` (теперь `IndexNowKit\Submission\ResultSummary`).
   - Имена опций и аргументов берутся из `Definitions` (`--force`, `--dry-run`, `--json`, `--live`, `--host`, `--probe-url`, `--limit`, `--event`, `--write-env`, `--length`): команда адаптера не объявляет свои копии.
   - `--force` объявляет заново URL внутри окна дебаунса; `--dry-run` логирует запрос вместо отправки (`dry_run` в конфигурации делает то же для каждой отправки).
-  - Ручная отправка: `submitEntity()` в Symfony, `submitModel()` в Laravel, `submitRecord()` в Yii2; команды — `indexnow:submit-entity`, `indexnow:submit-model`, `indexnow/submit-record`.
+  - Ручная отправка: `submitEntity()` в Symfony, `submitModel()` в Laravel, `submitRecord()` в Yii2 и Yii3; команды — `indexnow:submit-entity`, `indexnow:submit-model`, `indexnow/submit-record` (Yii2), `indexnow:submit-record` (Yii3).
   - `dispatch: auto` есть в Symfony (`auto` | `messenger` | `sync` | `none`) и Yii2 (`auto` | `queue` | `sync` | `none`), в Laravel **нет** (`queue` | `sync` | `none`).
 
 ## Версионирование
