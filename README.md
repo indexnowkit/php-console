@@ -47,6 +47,60 @@ application replaces it to match its own CLI), `Console\Vocabulary` (the words t
 for `--force` / `--dry-run` (`Adapter\SubmitterFactory`) and the aggregate of a batched run
 (`Submission\ResultSummary`) stay in the core: they are not CLI concerns.
 
+## Commands: how an application on symfony/console registers them
+
+Since 0.5.0 the commands are classes of this package (`IndexNowKit\Console\Command\*`), the ones the Symfony bundle and
+the Yii3 package register. An application with a `Symfony\Component\Console\Application` of its own registers them the
+same way: build the runners, hand each command what varies by constructor — nothing here knows a framework or a
+container.
+
+```php
+use IndexNowKit\Check\Checker;
+use IndexNowKit\Check\SampleOptions;
+use IndexNowKit\Config;
+use IndexNowKit\Console\CheckRunner;
+use IndexNowKit\Console\Command\CheckCommand;
+use IndexNowKit\Console\Command\ConfigCommand;
+use IndexNowKit\Console\Command\KeyGenerateCommand;
+use IndexNowKit\Console\Command\SubmitCommand;
+use IndexNowKit\Console\ConfigRunner;
+use IndexNowKit\Console\ConfigSourceInterface;
+use IndexNowKit\Console\KeyGenerateRunner;
+use IndexNowKit\Console\SubmitRunner;
+use IndexNowKit\Console\Vocabulary;
+use IndexNowKit\IndexNowKit;
+use Symfony\Component\Console\Application;
+
+final class EnvConfigSource implements ConfigSourceInterface          // what check and config read
+{
+    public function raw(): array { return Config::fromEnv()->toArray(); }
+    public function build(): Config { return Config::fromEnv(); }    // throws ConfigurationException when invalid
+    public function packages(): array { return []; }                 // the blocks of the installed optional packages
+}
+
+$indexNow = IndexNowKit::create(Config::fromEnv());
+$words = new Vocabulary(cli: 'bin/indexnow', configLocation: 'the INDEXNOW_* env vars');
+$submitters = $indexNow->submitterFactory();                         // --force / --dry-run build their own submitter
+
+$application = new Application('indexnow');
+$application->addCommands([
+    new CheckCommand(new CheckRunner(new Checker($indexNow->config, $indexNow->keys, $indexNow->transport), $words), new EnvConfigSource(), new SampleOptions()),
+    new ConfigCommand(new ConfigRunner($words), new EnvConfigSource()),
+    new SubmitCommand(new SubmitRunner($indexNow, $submitters)),
+    new KeyGenerateCommand(new KeyGenerateRunner($words), envFileName: '.env'),   // --write-env without a value: <cwd>/.env
+]);
+$application->run();
+```
+
+`SubmitSubjectsCommand` (`indexnow:submit-<subject>`, its name is `Vocabulary::$submitSubjects`) and `ExplainCommand`
+need a `SubjectLoaderInterface` — the ORM of the application — and are registered by the adapters that have one.
+`indexnow:sitemap` is `IndexNowKit\Sitemap\Console\SitemapCommand` of `indexnowkit/sitemap`, `indexnow:history` and
+`indexnow:status` are `IndexNowKit\History\Console\HistoryCommand` / `StatusCommand` of `indexnowkit/history`; without
+the package, `Command\SitemapNotInstalledCommand`, `HistoryNotInstalledCommand` and `StatusNotInstalledCommand` stand in
+under the same names with the install line and exit 1. In a Symfony container `SubmitSubjectsCommand` is registered
+lazily with the `command` and `description` attributes of the `console.command` tag (its name is not an attribute of
+the class); every other command carries `#[AsCommand]` and is lazy on its own.
+
 ## Plain PHP
 
 ```php
@@ -70,11 +124,11 @@ walks through the six commands; the bundle, the Laravel package, the Yii2 compon
 
 ## Requirements
 
-PHP 8.2+, `indexnowkit/core ^0.7`, `symfony/console ^6.4 || ^7.0 || ^8.0`.
+PHP 8.2+, `indexnowkit/core ^0.13`, `symfony/console ^6.4 || ^7.0 || ^8.0`.
 
 ## Notes for AI assistants
 
-- Composer package `indexnowkit/console`: the command bodies (`IndexNowKit\Console\*Runner`) and the command definitions (`IndexNowKit\Console\Definitions`) the framework adapters build their `check`, `submit`, `submit-entity` / `submit-model` / `submit-record`, `explain` and `key:generate` commands on. Framework users install an adapter, not this package.
+- Composer package `indexnowkit/console`: the command bodies (`IndexNowKit\Console\*Runner`), the command definitions (`IndexNowKit\Console\Definitions`) and, since 0.5.0, the symfony/console command classes themselves (`IndexNowKit\Console\Command\*`: `check`, `config`, `submit`, `submit-entity` / `submit-record`, `explain`, `key:generate`, the three "not installed" stubs) that the Symfony bundle and the Yii3 package register; Laravel (artisan) and Yii2 (a controller) build their commands on the runners. Framework users install an adapter, not this package.
 - Minimal complete snippet (every `use` included) — an application command over a runner:
 
 ```php

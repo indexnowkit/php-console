@@ -6,7 +6,6 @@ namespace IndexNowKit\Console\Tests\Unit;
 
 use IndexNowKit\Adapter\SubmitterFactory;
 use IndexNowKit\Attribute\AttributeReader;
-use IndexNowKit\Attribute\IndexNow;
 use IndexNowKit\Attribute\ParamExtractor;
 use IndexNowKit\Check\Checker;
 use IndexNowKit\Check\CheckInterface;
@@ -18,16 +17,18 @@ use IndexNowKit\Console\ExitCode;
 use IndexNowKit\Console\ExplainRunner;
 use IndexNowKit\Console\KeyGenerateRunner;
 use IndexNowKit\Console\ResultRenderer;
-use IndexNowKit\Console\SubjectLoaderInterface;
 use IndexNowKit\Console\SubmitRunner;
 use IndexNowKit\Console\SubmitSubjectsOptions;
 use IndexNowKit\Console\SubmitSubjectsRunner;
+use IndexNowKit\Console\Tests\Support\ArraySubjectLoader;
+use IndexNowKit\Console\Tests\Support\ConsoleArticle;
+use IndexNowKit\Console\Tests\Support\ConsolePost;
+use IndexNowKit\Console\Tests\Support\ConsoleUntracked;
 use IndexNowKit\Console\Tests\Support\Factory;
 use IndexNowKit\Console\Vocabulary;
 use IndexNowKit\Debounce\MemoryDebounceStore;
 use IndexNowKit\Event;
 use IndexNowKit\Exception\ConfigurationException;
-use IndexNowKit\Exception\InvalidArgumentException;
 use IndexNowKit\Http\Response;
 use IndexNowKit\IndexNowKit;
 use IndexNowKit\Key\KeyValidator;
@@ -41,80 +42,6 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
-
-#[IndexNow(url: 'url', when: 'status')]
-#[IndexNow(urls: ['/articles'], when: new \IndexNowKit\Attribute\Param\Equals('status', 'published'), name: 'index')]
-final class ConsoleArticle
-{
-    public function __construct(public int $id, public string $status = 'draft') {}
-
-    public function url(): string
-    {
-        return '/articles/' . $this->id;
-    }
-}
-
-#[IndexNow(url: 'url', when: 'published')]
-final class ConsolePost
-{
-    public function __construct(public int $id, public string $slug, public bool $published = true) {}
-
-    public function url(): string
-    {
-        return '/posts/' . $this->slug;
-    }
-}
-
-final class ConsoleUntracked
-{
-    public function __construct(public int $id) {}
-}
-
-/**
- * In-memory stand-in for an ORM loader: objects by class and id.
- */
-final class ArraySubjectLoader implements SubjectLoaderInterface
-{
-    /** @var list<Event> */
-    public array $events = [];
-
-    /**
-     * @param array<class-string, list<object>> $objects
-     */
-    public function __construct(private readonly array $objects) {}
-
-    public function resolveClass(string $class): string
-    {
-        $class = ltrim($class, '\\');
-        if (!isset($this->objects[$class])) {
-            throw new InvalidArgumentException(\sprintf('Class "%s" not found.', $class));
-        }
-
-        return $class;
-    }
-
-    public function byIds(string $class, array $ids, Event $event): array
-    {
-        $this->events[] = $event;
-        $found = [];
-        $missing = [];
-        foreach ($ids as $id) {
-            $match = array_values(array_filter($this->objects[$class] ?? [], static fn(object $o): bool => (string) $o->id === $id));
-            if ($match === []) {
-                $missing[] = $id;
-            } else {
-                $found[] = $match[0];
-            }
-        }
-
-        return [$found, $missing];
-    }
-
-    public function all(string $class, int $limit, Event $event): iterable
-    {
-        return \array_slice($this->objects[$class] ?? [], 0, $limit);
-    }
-}
 
 final class RunnersTest extends TestCase
 {

@@ -3,7 +3,32 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: SemVer; until 1.0 minor versions may
 contain breaking changes, listed under "Changed". What the compatibility promise covers: [docs/bc.md](docs/bc.md).
 
-## [0.4.2] — Unreleased
+## [0.5.0] — Unreleased
+
+### Added
+
+- **The commands themselves, as classes** (wave L, spec 18): `Console\Command\SubmitCommand`, `SubmitSubjectsCommand`,
+  `ExplainCommand`, `CheckCommand`, `ConfigCommand`, `KeyGenerateCommand` — the bodies the Symfony bundle and the Yii3
+  package each carried a copy of (eleven near-identical classes, ~900 lines) — and the three stubs of the optional
+  packages, `SitemapNotInstalledCommand`, `HistoryNotInstalledCommand`, `StatusNotInstalledCommand` (final, each with its
+  `#[AsCommand]`, over the abstract `NotInstalledCommand`: one sentence and exit 1 instead of "command not found";
+  three classes because a registry keyed by class — the command map of yiisoft/yii-console, Symfony's lazy loader —
+  needs a class per name). Everything that varies between adapters enters by constructor: the runner, a `Vocabulary`
+  (`SubmitSubjectsCommand` takes its **name** from `Vocabulary::$submitSubjects`, so it carries no `#[AsCommand]`; a
+  Symfony container registers it with the `command` and `description` attributes of the `console.command` tag),
+  `KeyGenerateCommand(runner, envFileName: '.env', envFile: null)` for what `--write-env` without a value means, and a
+  `Check\SampleOptions` whose sampler the adapter already put inside. An adapter on symfony/console registers these
+  classes and writes no command of its own; Laravel (artisan) and Yii2 (a controller) keep parsing over the runners.
+- **`Console\ConfigSourceInterface`** (`raw()`, `build()`, `packages()`): what `check` and `config` read — the adapter's
+  raw configuration, its strict build (`Adapter\ConfigFactory::build()`) and the blocks of the installed optional
+  packages — as one object per adapter instead of three constructor arguments. "Implement" tier: methods are not
+  added without a major version (before 1.0: without a minor listed under "Changed").
+- `KeyGenerateCommand::DEFAULT_LENGTH` (`32`).
+
+### Changed
+
+- Version 0.5.0 instead of 0.4.2: the classes above are additive, but `sitemap` and `history` build their commands on
+  them and pin `^0.5`, so the adapters move together. The fixes below were written for 0.4.2 and ship here.
 
 ### Fixed
 

@@ -40,6 +40,58 @@ composer require indexnowkit/console        # тянет indexnowkit/core и sym
 (`Adapter\SubmitterFactory`), и агрегат порционного прогона (`Submission\ResultSummary`) остаются в ядре: это не
 дела CLI.
 
+## Команды: как приложение на symfony/console регистрирует их
+
+С 0.5.0 команды — классы этого пакета (`IndexNowKit\Console\Command\*`), те самые, что регистрируют Symfony-бандл и
+пакет Yii3. Приложение со своим `Symfony\Component\Console\Application` регистрирует их так же: собирает раннеры и
+отдаёт каждой команде конструктором то, что варьируется, — ничего здесь не знает ни фреймворка, ни контейнера.
+
+```php
+use IndexNowKit\Check\Checker;
+use IndexNowKit\Check\SampleOptions;
+use IndexNowKit\Config;
+use IndexNowKit\Console\CheckRunner;
+use IndexNowKit\Console\Command\CheckCommand;
+use IndexNowKit\Console\Command\ConfigCommand;
+use IndexNowKit\Console\Command\KeyGenerateCommand;
+use IndexNowKit\Console\Command\SubmitCommand;
+use IndexNowKit\Console\ConfigRunner;
+use IndexNowKit\Console\ConfigSourceInterface;
+use IndexNowKit\Console\KeyGenerateRunner;
+use IndexNowKit\Console\SubmitRunner;
+use IndexNowKit\Console\Vocabulary;
+use IndexNowKit\IndexNowKit;
+use Symfony\Component\Console\Application;
+
+final class EnvConfigSource implements ConfigSourceInterface          // что читают check и config
+{
+    public function raw(): array { return Config::fromEnv()->toArray(); }
+    public function build(): Config { return Config::fromEnv(); }    // бросает ConfigurationException при ошибке
+    public function packages(): array { return []; }                 // блоки установленных опциональных пакетов
+}
+
+$indexNow = IndexNowKit::create(Config::fromEnv());
+$words = new Vocabulary(cli: 'bin/indexnow', configLocation: 'переменные окружения INDEXNOW_*');
+$submitters = $indexNow->submitterFactory();                         // --force / --dry-run собирают свой submitter
+
+$application = new Application('indexnow');
+$application->addCommands([
+    new CheckCommand(new CheckRunner(new Checker($indexNow->config, $indexNow->keys, $indexNow->transport), $words), new EnvConfigSource(), new SampleOptions()),
+    new ConfigCommand(new ConfigRunner($words), new EnvConfigSource()),
+    new SubmitCommand(new SubmitRunner($indexNow, $submitters)),
+    new KeyGenerateCommand(new KeyGenerateRunner($words), envFileName: '.env'),   // --write-env без значения: <cwd>/.env
+]);
+$application->run();
+```
+
+`SubmitSubjectsCommand` (`indexnow:submit-<subject>`, имя — `Vocabulary::$submitSubjects`) и `ExplainCommand` требуют
+`SubjectLoaderInterface` — ORM приложения — и регистрируются адаптерами, у которых он есть. `indexnow:sitemap` —
+`IndexNowKit\Sitemap\Console\SitemapCommand` пакета `indexnowkit/sitemap`, `indexnow:history` и `indexnow:status` —
+`IndexNowKit\History\Console\HistoryCommand` / `StatusCommand` пакета `indexnowkit/history`; без пакета под теми же
+именами стоят `Command\SitemapNotInstalledCommand`, `HistoryNotInstalledCommand` и `StatusNotInstalledCommand`: строка
+установки и код выхода 1. В контейнере Symfony `SubmitSubjectsCommand` регистрируется лениво атрибутами `command` и
+`description` тега `console.command` (имя — не атрибут класса); остальные команды несут `#[AsCommand]` и ленивы сами.
+
 ## Чистый PHP
 
 ```php
@@ -63,11 +115,11 @@ exit($runner->run($io, static fn(): Config => Config::fromEnv(), live: true));
 
 ## Требования
 
-PHP 8.2+, `indexnowkit/core ^0.7`, `symfony/console ^6.4 || ^7.0 || ^8.0`.
+PHP 8.2+, `indexnowkit/core ^0.13`, `symfony/console ^6.4 || ^7.0 || ^8.0`.
 
 ## Заметки для AI-ассистентов
 
-- Composer-пакет `indexnowkit/console`: тела команд (`IndexNowKit\Console\*Runner`) и определения команд (`IndexNowKit\Console\Definitions`), на которых адаптеры фреймворков строят свои `check`, `submit`, `submit-entity` / `submit-model` / `submit-record`, `explain` и `key:generate`. Пользователи фреймворков ставят адаптер, а не этот пакет.
+- Composer-пакет `indexnowkit/console`: тела команд (`IndexNowKit\Console\*Runner`), определения команд (`IndexNowKit\Console\Definitions`) и с 0.5.0 сами классы команд symfony/console (`IndexNowKit\Console\Command\*`: `check`, `config`, `submit`, `submit-entity` / `submit-record`, `explain`, `key:generate`, три стаба «пакет не установлен»), которые регистрируют Symfony-бандл и пакет Yii3; Laravel (artisan) и Yii2 (контроллер) строят свои команды на раннерах. Пользователи фреймворков ставят адаптер, а не этот пакет.
 - Минимальный полный сниппет (все `use` на месте) — команда приложения поверх раннера:
 
 ```php

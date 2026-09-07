@@ -1,6 +1,6 @@
 {
     "name": "indexnowkit/console",
-    "description": "Console runners for indexnowkit: the bodies of the check, submit, submit-<subject>, explain and key:generate commands of every framework adapter, and the one declaration of their arguments and options (symfony/console)",
+    "description": "Console commands for indexnowkit: the check, config, submit, submit-<subject>, explain and key:generate commands of every framework adapter as symfony/console classes, their runners, and the one declaration of their arguments and options",
     "type": "library",
     "license": "MIT",
     "minimum-stability": "dev",
@@ -62,7 +62,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "0.4.x-dev"
+            "dev-main": "0.5.x-dev"
         }
     }
 }
