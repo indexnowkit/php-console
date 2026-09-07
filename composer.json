@@ -27,7 +27,7 @@
     },
     "require": {
         "php": "^8.2",
-        "indexnowkit/core": "^0.12",
+        "indexnowkit/core": "^0.13",
         "symfony/console": "^6.4 || ^7.0 || ^8.0"
     },
     "require-dev": {
