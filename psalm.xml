@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+    Psalm runs the taint analysis of this package only (bin/taint console, .github/workflows/taint.yml); phpstan level 9 is the
+    type checker. src plus the entry-point harness tests/Taint/entrypoints.php, which calls the public API with request
+    data: a library has no taint source of its own. Psalm is a tool of the monorepo (tools/psalm), not a dev dependency.
+-->
+<psalm
+    errorLevel="4"
+    resolveFromConfigFile="true"
+    findUnusedBaselineEntry="false"
+    findUnusedCode="false"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config ../../tools/psalm/vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <directory name="src" />
+        <file name="tests/Taint/entrypoints.php" />
+        <ignoreFiles>
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+    <issueHandlers>
+        <!-- key:generate with an env file: the path comes from the operator's command line by design and the file is meant
+             to be written there; Psalm sees the request-shaped harness value reach touch()/chmod()/file_put_contents(). -->
+        <TaintedFile>
+            <errorLevel type="suppress"><file name="src/KeyGenerateRunner.php"/></errorLevel>
+        </TaintedFile>
+    </issueHandlers>
+</psalm>
