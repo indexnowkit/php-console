@@ -119,7 +119,9 @@ $runner = new CheckRunner(new Checker($indexNow->config, $indexNow->keys, $index
 exit($runner->run($io, static fn(): Config => Config::fromEnv(), live: true));
 ```
 
-Writing an adapter? [core/docs/adapters.md §14](https://github.com/indexnowkit/php/blob/main/packages/core/docs/adapters.md)
+No framework at all? Install the CLI instead of writing this: [`indexnowkit/cli`](https://github.com/indexnowkit/php/tree/main/packages/cli)
+(`composer global require indexnowkit/cli`, a PHAR, a Docker image) registers these classes over `INDEXNOW_*` variables and a
+state file. Writing an adapter? [core/docs/adapters.md §14](https://github.com/indexnowkit/php/blob/main/packages/core/docs/adapters.md)
 walks through the six commands; the bundle, the Laravel package, the Yii2 component and the Yii3 package are the reference wirings.
 
 ## Requirements
