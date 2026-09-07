@@ -128,7 +128,7 @@ PHP 8.2+, `indexnowkit/core ^0.13`, `symfony/console ^6.4 || ^7.0 || ^8.0`.
 
 ## Notes for AI assistants
 
-- Composer package `indexnowkit/console`: the command bodies (`IndexNowKit\Console\*Runner`), the command definitions (`IndexNowKit\Console\Definitions`) and, since 0.5.0, the symfony/console command classes themselves (`IndexNowKit\Console\Command\*`: `check`, `config`, `submit`, `submit-entity` / `submit-record`, `explain`, `key:generate`, the three "not installed" stubs) that the Symfony bundle and the Yii3 package register; Laravel (artisan) and Yii2 (a controller) build their commands on the runners. Framework users install an adapter, not this package.
+- Composer package `indexnowkit/console`: the command bodies (`IndexNowKit\Console\*Runner`), the command definitions (`IndexNowKit\Console\Definitions`) and, since 0.5.0, the symfony/console command classes themselves (`IndexNowKit\Console\Command\*`: `check`, `config`, `submit`, `submit-entity` / `submit-record`, `explain`, `key:generate`, the three "not installed" stubs) that the Symfony bundle, the Laravel package (artisan runs any symfony/console command; `submit-model` through a `LazyCommand`, the class argument named `model`) and the Yii3 package register; Yii2 (a `yii\console\Controller`) builds its actions on the runners. Since 0.5.0 also `Console\SubjectSampler` (the `--sample-class` sampler) and `Console\AbstractSubjectLoader` (the skeleton of an ORM loader). Framework users install an adapter, not this package.
 - Minimal complete snippet (every `use` included) — an application command over a runner:
 
 ```php
