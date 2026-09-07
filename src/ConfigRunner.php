@@ -12,8 +12,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Body of `indexnow:config`: the effective configuration after defaults and environment variables, keys masked,
- * plus the adapter-only keys of the raw configuration (`messenger.*`, `queue.*`, `eloquent.*`, …) as given. The
- * artifact for a bug report and for an assistant that has to reason about a setup; `--json` for both.
+ * plus the adapter-only keys of the raw configuration (`messenger.*`, `queue.*`, `eloquent.*`, …) nested as given
+ * but with their secrets masked ({@see maskedBlock()}). The artifact for a bug report and for an assistant that has
+ * to reason about a setup; `--json` for both.
  */
 final class ConfigRunner
 {
@@ -175,7 +176,9 @@ final class ConfigRunner
 
     /**
      * The raw keys the core does not know, nested as given: the adapter's own blocks. `hosts` and every
-     * `Config::OPTIONS` key are left out (they are in the effective configuration already).
+     * `Config::OPTIONS` key are left out (they are in the effective configuration already), and the secrets go
+     * through {@see maskedBlock()} — the block of an optional package that is not installed lands here, and
+     * `history.pdo.dsn` carries the database password.
      *
      * @param array<string, mixed> $raw
      *
@@ -205,7 +208,10 @@ final class ConfigRunner
             $out[$name] = $value;
         }
 
-        return $out;
+        /** @var array<string, mixed> $masked */
+        $masked = self::maskedBlock($out);
+
+        return $masked;
     }
 
     /**

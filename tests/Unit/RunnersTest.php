@@ -447,6 +447,85 @@ final class RunnersTest extends TestCase
         self::assertStringContainsString('Cannot write', $this->output->fetch());
     }
 
+    #[TestDox('key:generate --write-env creates the env file with mode 0600 before the key goes in, and warns about an existing file anyone can read')]
+    public function testKeyGeneratePermissions(): void
+    {
+        $runner = new KeyGenerateRunner();
+        $file = sys_get_temp_dir() . '/indexnow-env-' . bin2hex(random_bytes(6));
+
+        try {
+            self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $file));
+            self::assertSame(0o600, fileperms($file) & 0o777, 'a file the command creates is readable by its owner only');
+            $this->output->fetch();
+
+            $wide = sys_get_temp_dir() . '/indexnow-env-' . bin2hex(random_bytes(6));
+            file_put_contents($wide, "APP_NAME=x\n");
+            chmod($wide, 0o644);
+
+            try {
+                self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $wide));
+                $display = $this->output->fetch();
+                self::assertStringContainsString('readable beyond its owner', $display);
+                self::assertStringContainsString('chmod 600', $display);
+                self::assertStringContainsString('INDEXNOW_KEY=', (string) file_get_contents($wide));
+            } finally {
+                @unlink($wide);
+            }
+        } finally {
+            @unlink($file);
+        }
+    }
+
+    #[TestDox('key:generate --force keeps a previous key containing $0 verbatim: it never reaches preg_replace as a back-reference')]
+    public function testKeyGenerateEscapesThePreviousKey(): void
+    {
+        $runner = new KeyGenerateRunner();
+        $file = sys_get_temp_dir() . '/indexnow-env-' . bin2hex(random_bytes(6));
+        file_put_contents($file, "INDEXNOW_KEY=\$0\\x\n");
+
+        try {
+            self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), envFile: $file, force: true));
+            $contents = (string) file_get_contents($file);
+            self::assertMatchesRegularExpression('/^INDEXNOW_KEY=[a-f0-9]{32}\nINDEXNOW_PREVIOUS_KEY=\$0\\\\x\n$/', $contents, 'the old value is kept literally, not substituted by the match');
+            self::assertStringNotContainsString('INDEXNOW_PREVIOUS_KEY=INDEXNOW_KEY=', $contents);
+        } finally {
+            @unlink($file);
+        }
+    }
+
+    #[TestDox('config: a DSN in an adapter-only block is masked too — the block of an optional package that is not installed lands there')]
+    public function testConfigMasksAdapterOnlySecrets(): void
+    {
+        $raw = ['key' => Factory::KEY, 'base_url' => 'https://www.example.com', 'history' => ['store' => 'pdo', 'pdo' => ['dsn' => 'pgsql:host=db;dbname=app;user=app;password=s3cret-pass', 'table' => 'indexnow_submissions']], 'queue' => ['connection' => 'redis', 'token' => 'tok-123']];
+        $runner = new ConfigRunner();
+        $valid = static fn(): Config => Config::fromArray($raw);
+
+        // No $packages: indexnowkit/history is not installed, so the adapter still hands the block over among the raw keys.
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), $valid, $raw, true));
+        $rawOutput = $this->output->fetch();
+        self::assertStringNotContainsString('s3cret-pass', $rawOutput);
+        self::assertStringNotContainsString('tok-123', $rawOutput);
+        $decoded = json_decode($rawOutput, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('pgsql:host=db;dbname=app;user=****;password=****', $decoded['adapter']['history']['pdo']['dsn']);
+        self::assertSame('****', $decoded['adapter']['queue']['token']);
+        self::assertSame('redis', $decoded['adapter']['queue']['connection'], 'the harmless keys are printed as given');
+
+        self::assertSame(ExitCode::SUCCESS, $runner->run($this->io(), $valid, $raw));
+        $display = $this->output->fetch();
+        self::assertStringContainsString('history.pdo.dsn', $display);
+        self::assertStringNotContainsString('s3cret-pass', $display);
+
+        self::assertSame(ExitCode::FAILURE, $runner->run($this->io(), static function (): never {
+            throw new ConfigurationException('key "shor*" is invalid');
+        }, $raw, true));
+        $rawOutput = $this->output->fetch();
+        self::assertStringNotContainsString('s3cret-pass', $rawOutput, 'the branch a bug report is pasted from masks too');
+        $decoded = json_decode($rawOutput, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('pgsql:host=db;dbname=app;user=****;password=****', $decoded['adapter']['history']['pdo']['dsn']);
+    }
+
     #[TestDox('check: prints the report lines and the adapter checks, exit 0 when ready, exit 1 on errors or an invalid configuration')]
     public function testCheck(): void
     {

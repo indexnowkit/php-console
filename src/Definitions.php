@@ -78,7 +78,7 @@ final class Definitions
             ],
             [
                 OptionDefinition::value('event', 'created | updated | deleted', 'updated'),
-                OptionDefinition::value('limit', \sprintf('Max %s when no ids are given', $words->subjects), '1000'),
+                OptionDefinition::value('limit', \sprintf('Max %s when no ids are given', $words->subjects), (string) SubmitSubjectsOptions::DEFAULT_LIMIT),
                 OptionDefinition::flag('explain', 'Show which rule produced which URL and submit nothing'),
                 OptionDefinition::flag('force', 'Ignore the debounce store', 'f'),
                 OptionDefinition::flag('dry-run', 'Log the request instead of sending it'),

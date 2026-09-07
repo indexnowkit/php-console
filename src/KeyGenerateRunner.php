@@ -47,6 +47,11 @@ final class KeyGenerateRunner
         }
 
         $existed = is_file($envFile);
+        if (!$existed && !self::createPrivate($envFile)) {
+            $io->error(\sprintf('Cannot write %s.', $envFile));
+
+            return ExitCode::FAILURE;
+        }
         $contents = $existed ? (string) file_get_contents($envFile) : '';
         $line = 'INDEXNOW_KEY=' . $key;
         if (preg_match(self::KEY_LINE, $contents, $current) === 1) {
@@ -61,27 +66,56 @@ final class KeyGenerateRunner
 
                 return ExitCode::FAILURE;
             }
-            $contents = (string) preg_replace(self::KEY_LINE, '$1' . $line, $contents, 1);
+            $contents = (string) preg_replace(self::KEY_LINE, '$1' . self::replacement($line), $contents, 1);
             $contents = $noPrevious ? self::withoutPreviousKey($contents) : self::withPreviousKey($contents, $previous);
             $io->warning(\sprintf('Rotating the key: submissions fail with 403 until the new key file is reachable (CDN caches!). Run %s afterwards.', $this->words->check));
         } else {
             $contents .= ($contents === '' || str_ends_with($contents, "\n") ? '' : "\n") . $line . "\n";
         }
+        $wideMode = $existed ? self::widerThanOwner($envFile) : null;
         if (@file_put_contents($envFile, $contents) === false) {
             $io->error(\sprintf('Cannot write %s.', $envFile));
 
             return ExitCode::FAILURE;
         }
-        if (!$existed) {
-            @chmod($envFile, 0o600); // a file this command creates holds the key: readable by its owner only, whatever the umask
-        }
         $io->writeln(\sprintf('<info>INDEXNOW_KEY written to %s.</info>', $envFile));
+        if ($wideMode !== null) {
+            // Narrowing an existing file is the application's call (a deploy may rely on the group reading it): say it, do not do it.
+            $io->warning(\sprintf('%s is readable beyond its owner (mode %s) and now holds the key: run chmod 600 %s.', $envFile, $wideMode, $envFile));
+        }
         if (isset($previous) && !$noPrevious && $previous !== '') {
             $io->text(\sprintf('The old key %s is kept as INDEXNOW_PREVIOUS_KEY: the key file keeps answering for it while the engines pick up the new key. Remove the variable once %s --live is green.', KeyValidator::mask($previous), $this->words->check));
         }
         $io->text(\sprintf('The key file is served at /<key>.txt %s. Verify with: %s %s', $this->words->keyFileServedBy, $this->words->cli, $this->words->check));
 
         return ExitCode::SUCCESS;
+    }
+
+    /**
+     * Creates $envFile empty and readable by its owner only, before the key is written into it: `file_put_contents()`
+     * alone would create it under the umask (usually 0644) and hold the key for as long as the `chmod` takes.
+     */
+    private static function createPrivate(string $envFile): bool
+    {
+        $handle = @fopen($envFile, 'x');
+        if ($handle === false) {
+            return false;
+        }
+        fclose($handle);
+
+        return @chmod($envFile, 0o600);
+    }
+
+    /** The mode of $envFile as `0644` when it lets anyone but the owner read it, null when it is 0600 or narrower. */
+    private static function widerThanOwner(string $envFile): ?string
+    {
+        $mode = @fileperms($envFile);
+        if ($mode === false) {
+            return null;
+        }
+        $mode &= 0o777;
+
+        return ($mode & 0o077) === 0 ? null : \sprintf('0%03o', $mode);
     }
 
     private static function previousKeyIsSet(string $contents): bool
@@ -95,12 +129,21 @@ final class KeyGenerateRunner
         if ($previous === '') {
             return $contents;
         }
-        $line = 'INDEXNOW_PREVIOUS_KEY=' . $previous;
+        $line = 'INDEXNOW_PREVIOUS_KEY=' . self::replacement($previous);
         if (preg_match(self::PREVIOUS_LINE, $contents) === 1) {
             return (string) preg_replace(self::PREVIOUS_LINE, '$1' . $line, $contents, 1);
         }
 
         return (string) preg_replace(self::KEY_LINE, '$0' . "\n" . '$1' . $line, $contents, 1);
+    }
+
+    /**
+     * A value going into the replacement string of `preg_replace()`: the key read from the env file is not ours, and
+     * `INDEXNOW_KEY=$0` would otherwise substitute the match instead of being kept verbatim.
+     */
+    private static function replacement(string $value): string
+    {
+        return str_replace(['\\', '$'], ['\\\\', '\\$'], $value);
     }
 
     private static function withoutPreviousKey(string $contents): string

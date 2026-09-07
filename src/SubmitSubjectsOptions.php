@@ -11,6 +11,12 @@ namespace IndexNowKit\Console;
 final class SubmitSubjectsOptions
 {
     /**
+     * How many objects `submit-<subject>` loads when no ids are given: the default of `--limit` in
+     * {@see Definitions::submitSubjects()}, and what an adapter falls back to for a non-numeric `--limit`.
+     */
+    public const DEFAULT_LIMIT = 1000;
+
+    /**
      * @param string       $class   class argument as typed (FQCN or short name)
      * @param list<string> $ids     identifiers; none = every object of the class up to $limit
      * @param string       $event   created | updated | deleted
@@ -21,7 +27,7 @@ final class SubmitSubjectsOptions
         public readonly string $class,
         public readonly array $ids = [],
         public readonly string $event = 'updated',
-        public readonly int $limit = 1000,
+        public readonly int $limit = self::DEFAULT_LIMIT,
         public readonly bool $explain = false,
         public readonly bool $force = false,
         public readonly bool $dryRun = false,
