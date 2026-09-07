@@ -5,6 +5,26 @@ contain breaking changes, listed under "Changed". What the compatibility promise
 
 ## [0.4.2] — Unreleased
 
+### Fixed
+
+- **`indexnow:config` masks the adapter-only keys too** (`ConfigRunner::adapterOnly()` now goes through
+  `maskedBlock()`). The masking added in 0.4.0 covered only the blocks of **installed** optional packages, and every
+  adapter hands `history` over as a plain adapter key while `indexnowkit/history` is absent — so `history.pdo.dsn` with
+  its database password was printed in full, in the table, in `--json`, and in the "the configuration does not build"
+  JSON the command invites you to paste into a bug report.
+- **`indexnow:key:generate --write-env` creates the env file with mode 0600 before the key is written into it.** It was
+  created under the umask (usually 0644), the key went in, and only then were the permissions narrowed. An env file
+  that already existed with wider permissions is not narrowed (that is the application's call) but now gets a warning
+  line naming the file and the `chmod` to run.
+- **A key rotation keeps a previous key containing `$` or `\` verbatim.** The old key is read from the env file and went
+  into the replacement string of `preg_replace()` unescaped: an inherited `INDEXNOW_KEY=$0` wrote
+  `INDEXNOW_PREVIOUS_KEY=INDEXNOW_KEY=<new key>` into the file.
+
+### Added
+
+- `SubmitSubjectsOptions::DEFAULT_LIMIT` (`1000`): the default of `--limit` in `Definitions::submitSubjects()`, and
+  what an adapter should fall back to for a non-numeric `--limit` instead of repeating the literal.
+
 ### Changed
 
 - Requires `indexnowkit/core ^0.13`.
