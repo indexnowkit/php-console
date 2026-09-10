@@ -3,6 +3,15 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: SemVer; until 1.0 minor versions may
 contain breaking changes, listed under "Changed". What the compatibility promise covers: [docs/bc.md](docs/bc.md).
 
+## [Unreleased]
+
+### Changed
+
+- **`docs/check.schema.json`: the `$id` now points at the cross-language specification** —
+  `https://github.com/indexnowkit/spec/blob/main/check.schema.json` instead of this package's `docs/` path. The file is a byte-identical
+  copy of the canonical schema in `indexnowkit/spec` (the Python family ships the same copy); nothing else in the schema
+  changed, validation against it is unaffected.
+
 ## [0.5.0] — 2026-09-08
 
 ### Added
